@@ -1022,6 +1022,7 @@ function renderChangePasswordScreen(u) {
     <div class="field"><label>New Password</label><input class="control" type="password" id="pwc-new" placeholder="Enter new password"></div>
     <div class="field"><label>Confirm Password</label><input class="control" type="password" id="pwc-conf" placeholder="Confirm your password"></div>
     <button class="btn block lg" onclick="saveCustomPassword(${u.id})">${svg('check')} Set Password</button>
+    <div style="text-align:center;margin-top:14px"><button class="linkbtn" style="font-size:12.5px;color:var(--ink-soft);font-weight:600;display:inline-flex;align-items:center;gap:5px" onclick="logout()">${svg('logout')} Cancel & Sign out</button></div>
   </div></div>`;
 }
 
