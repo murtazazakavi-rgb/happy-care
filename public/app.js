@@ -294,7 +294,7 @@ function seed(){
   if(DB.all('meta').length) return;
   DB.insert('meta',{k:'seeded',v:true});
   const acc=(itsId,name,role,pw,extra)=>{const salt=rndSalt();return DB.insert('users',Object.assign({itsId,name,role,salt,hash:hashPw(pw,salt),active:true,needsPasswordChange:true},extra||{}));};
-  acc('30456117','Program Admin','admin','happycare123');
+  acc('30456117','Program Admin','admin','happycare123',{needsPasswordChange:false});
 }
 
 /* ============================================================
