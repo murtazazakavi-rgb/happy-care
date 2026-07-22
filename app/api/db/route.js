@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { sql } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
@@ -44,7 +45,9 @@ export async function GET() {
       _seq[t] = maxId;
     }
 
-    return NextResponse.json({ fallback: false, data, _seq });
+    const response = NextResponse.json({ fallback: false, data, _seq });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    return response;
   } catch (error) {
     console.error('Error fetching database:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
