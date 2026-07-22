@@ -85,10 +85,13 @@ export async function POST(request) {
 
           // Reset serial sequences
           try {
-            const seqName = `'"${t}"'`;
-            await tx`SELECT setval(pg_get_serial_sequence(${seqName}, 'id'), COALESCE(MAX("id"), 1)) FROM ${tx(t)}`;
+            const seqResult = await tx`SELECT pg_get_serial_sequence(${t}, 'id') AS seq`;
+            const seqName = seqResult[0] && seqResult[0].seq;
+            if (seqName) {
+              await tx`SELECT setval(${seqName}, COALESCE(MAX("id"), 1)) FROM ${tx(t)}`;
+            }
           } catch (seqError) {
-            // Some tables might not have serial sequences, ignore
+            console.error(`Failed to reset sequence for ${t}:`, seqError);
           }
         }
       });
@@ -119,10 +122,13 @@ export async function POST(request) {
 
       if (sanitized.id) {
         try {
-          const seqName = `'"${table}"'`;
-          await sql`SELECT setval(pg_get_serial_sequence(${seqName}, 'id'), COALESCE(MAX("id"), 1)) FROM ${sql(table)}`;
+          const seqResult = await sql`SELECT pg_get_serial_sequence(${table}, 'id') AS seq`;
+          const seqName = seqResult[0] && seqResult[0].seq;
+          if (seqName) {
+            await sql`SELECT setval(${seqName}, COALESCE(MAX("id"), 1)) FROM ${sql(table)}`;
+          }
         } catch (seqError) {
-          // ignore
+          console.error(`Failed to reset sequence for ${table}:`, seqError);
         }
       }
 
