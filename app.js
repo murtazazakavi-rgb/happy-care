@@ -370,11 +370,26 @@ function requireAdmin(){const u=currentUser();return u.role==='admin';}
    ============================================================ */
 SCREENS.setup=function(){
   const u=currentUser(); const prog=DB.all('programs')[0]; const phs=DB.all('phases');
+  const ph=currentPhase();
+  const staff=ph ? DB.filter('staff', s=>s.phaseId===ph.id).sort((a,b)=>a.name.localeCompare(b.name)) : [];
   return {title:'Setup', html:`
     ${u.role!=='admin'?'<div class="banner info"><div class="bi">'+svg('shield')+'</div><div><b>View only</b><p>Only Admin can change program setup.</p></div></div>':''}
     <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="eyebrow">Program</div><div class="serif" style="font-size:22px;font-weight:700;color:var(--wine)">${esc(prog?prog.name:'—')}</div><div class="muted" style="font-size:12px">Hijri year ${esc(prog?prog.year:'—')}</div></div>${u.role==='admin'?`<button class="btn ghost sm" onclick="editProgram()">${svg('edit')} Edit</button>`:''}</div></div>
     <div class="sec-h"><h3>Phases</h3>${u.role==='admin'?`<button class="btn sm" onclick="editPhase(0)">${svg('plus')} Add phase</button>`:''}</div>
-    <div class="stack">${phs.map(p=>phaseCard(p,u)).join('')||emptyState('cal','No phases yet','Add a phase to generate operating dates.','')}</div>`};
+    <div class="stack">${phs.map(p=>phaseCard(p,u)).join('')||emptyState('cal','No phases yet','Add a phase to generate operating dates.','')}</div>
+    
+    <div class="sec-h" style="margin-top:28px"><h3>Staff Members Pool</h3>${u.role==='admin'?`<button class="btn sm" onclick="openStaffForm(0)">${svg('plus')} Add staff</button>`:''}</div>
+    <div class="card" style="padding:15px">
+      <div class="rows">${staff.length?staff.map(s=>`
+        <div class="row" style="padding:8px 12px;box-shadow:none;border-color:var(--line-soft)">
+          <div class="av" style="width:34px;height:34px">${initials(s.name)}</div>
+          <div class="meta"><div class="nm" style="font-size:13.5px">${esc(s.name)} <span class="tag" style="margin-left:6px">${esc(s.role)}</span></div>
+            <div class="sm">ITS ${esc(s.itsId||'—')} · Mobile ${esc(s.mobile||'—')} · ${s.visibleToParents?'Visible to parents':'Private'}</div></div>
+          ${u.role==='admin'?`<div class="end"><button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto" onclick="openStaffForm(${s.id})">${svg('edit')}</button>
+            <button class="xbtn" style="width:30px;height:30px" onclick="deleteStaff(${s.id})">${svg('trash')}</button></div>`:''}
+        </div>`).join(''):'<div class="muted" style="font-size:12.5px;text-align:center;padding:12px">No staff in this phase. Click Add staff to populate.</div>'}
+      </div>
+    </div>`};
 };
 function phaseCard(p,u){
   const dates=phaseDates(p.id); const gs=phaseGroups(p.id); const ready=gs.filter(g=>groupReadiness(g).ready).length;
@@ -688,6 +703,7 @@ function openStaffForm(id){ const s=id?DB.byId('staff',id):{itsId:'',name:'',rol
     `<button class="btn ghost block" onclick="closeModal()">Cancel</button><button class="btn block" onclick="saveStaff(${id||0})">Save</button>`); }
 function saveStaff(id){ const name=val('sf-name'); if(!name){toast('Name required','err');return;} const ph=currentPhase(); const rec={itsId:val('sf-its'),name,role:$('#sf-role').value,mobile:val('sf-mob'),altMobile:val('sf-alt'),visibleToParents:checked('sf-vis'),phaseId:ph?ph.id:null};
   if(id)DB.update('staff',id,rec); else DB.insert('staff',rec); closeModal(); toast('Staff saved'); render(); }
+function deleteStaff(id){ if(!confirm('Are you sure you want to remove this staff member?'))return; DB.filter('groupStaff',x=>x.staffId===id).forEach(x=>DB.remove('groupStaff',x.id)); DB.remove('staff',id); toast('Staff member removed'); render(); }
 
 /* ============================================================
    TIMETABLES
