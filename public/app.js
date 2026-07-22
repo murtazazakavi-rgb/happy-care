@@ -899,10 +899,25 @@ function openStaffForm(id){ const s=id?DB.byId('staff',id):{itsId:'',name:'',rol
     
     <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px"><input type="checkbox" id="sf-vis" ${s.visibleToParents!==false?'checked':''}> Visible to parents (name & contact shown on child profile)</label>`,
     `<button class="btn ghost block" onclick="closeModal()">Cancel</button><button class="btn block" onclick="saveStaff(${id||0})">Save</button>`); }
-function saveStaff(id){ const name=val('sf-name'); if(!name){toast('Name required','err');return;} const ph=currentPhase(); const rec={itsId:val('sf-its'),name,role:$('#sf-role').value,mobile:val('sf-mob'),altMobile:val('sf-alt'),visibleToParents:checked('sf-vis'),phaseId:ph?ph.id:null,
+function saveStaff(id){ const name=val('sf-name'); if(!name){toast('Name required','err');return;} const ph=currentPhase(); const itsId=val('sf-its').trim(); const role=$('#sf-role').value;
+  const rec={itsId,name,role,mobile:val('sf-mob'),altMobile:val('sf-alt'),visibleToParents:checked('sf-vis'),phaseId:ph?ph.id:null,
     bankName:val('sf-bank-name'),bankAccount:val('sf-bank-acc'),bankIfsc:val('sf-bank-ifsc'),panNumber:val('sf-pan-num'),panImage:val('sf-pan-img'),chequeImage:val('sf-cheque-img')};
-  if(id)DB.update('staff',id,rec); else DB.insert('staff',rec); closeModal(); toast('Staff saved'); render(); }
-function deleteStaff(id){ if(!confirm('Are you sure you want to remove this staff member?'))return; DB.filter('groupStaff',x=>x.staffId===id).forEach(x=>DB.remove('groupStaff',x.id)); DB.remove('staff',id); toast('Staff member removed'); render(); }
+  let savedStaff = null;
+  if(id) savedStaff = DB.update('staff',id,rec); else savedStaff = DB.insert('staff',rec);
+  
+  if (savedStaff && itsId) {
+    let u = DB.find('users', x => x.staffId === savedStaff.id);
+    if (!u) u = DB.find('users', x => x.itsId === itsId);
+    const userRole = (role === 'Supervisor' || role === 'Coordinator') ? 'supervisor' : 'teacher';
+    if (u) {
+      DB.update('users', u.id, { itsId: itsId, name: name, role: userRole, staffId: savedStaff.id });
+    } else {
+      const salt = rndSalt();
+      DB.insert('users', { itsId: itsId, name: name, role: userRole, salt: salt, hash: hashPw('happycare123', salt), active: true, needsPasswordChange: true, staffId: savedStaff.id });
+    }
+  }
+  closeModal(); toast('Staff saved'); render(); }
+function deleteStaff(id){ if(!confirm('Are you sure you want to remove this staff member?'))return; const u = DB.find('users', x => x.staffId === id); if(u) DB.remove('users', u.id); DB.filter('groupStaff',x=>x.staffId===id).forEach(x=>DB.remove('groupStaff',x.id)); DB.remove('staff',id); toast('Staff member removed'); render(); }
 
 /* ============================================================
    TIMETABLES
