@@ -377,7 +377,7 @@ SCREENS.login=function(){
     <h1 style="font-size:38px;font-weight:700;color:var(--wine);text-align:center;line-height:1;margin-bottom:2px;letter-spacing:-0.02em">Happy Care</h1>
     <div style="text-align:center;font-size:12.5px;color:var(--ink-soft);margin:4px 0 20px;font-style:italic">An initiative by Daeratul Aqeeq</div>
     <div class="seg"><button id="lm-staff" class="${loginMode==='staff'?'on':''}" onclick="setLoginMode('staff')">Staff</button><button id="lm-parent" class="${loginMode==='parent'?'on':''}" onclick="setLoginMode('parent')">Parent</button></div>
-    <div class="field"><label>${loginMode==='parent'?'Parent ITS ID':'ITS ID'}</label><input class="control" id="li-its" inputmode="numeric" placeholder="e.g. ${loginMode==='parent'?'60000001':'30456117'}" style="transition:transform 0.15s ease"></div>
+    <div class="field"><label>${loginMode==='parent'?'Parent ITS ID':'ITS ID'}</label><input class="control" id="li-its" inputmode="numeric" placeholder="e.g. ${loginMode==='parent'?'60000001':'10000001'}" style="transition:transform 0.15s ease"></div>
     <div class="field"><label>Password</label><input class="control" id="li-pw" type="password" placeholder="Enter password" style="transition:transform 0.15s ease"></div>
     <button class="btn block lg" id="li-go" style="margin-top:6px">${svg('key')} Sign in</button>
     <div style="text-align:center;margin-top:14px"><button class="linkbtn" style="font-size:12.5px;color:var(--ink-soft);font-weight:600;display:inline-flex;align-items:center;gap:5px" onclick="openForgotPassword()">${svg('lock')} Forgot password?</button></div>
