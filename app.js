@@ -247,9 +247,11 @@ function openMenu(){
     <div class="row" style="margin-bottom:12px"><div class="av" style="background:var(--gold-100);color:var(--gold)">${initials(u.name)}</div>
       <div class="meta"><div class="nm">${esc(u.name)}</div><div class="sm">${ROLE_LABEL[u.role]} · ITS ${esc(u.itsId)}</div></div></div>
     <div class="stack">
+      ${u.role==='admin'?`
       <button class="btn ghost block" onclick="closeModal();backupData()">${svg('download')} Backup all data (JSON)</button>
       <button class="btn ghost block" onclick="closeModal();restoreData()">${svg('upload')} Restore from backup</button>
-      ${u.role==='admin'?`<button class="btn ghost block" onclick="resetDemo()">${svg('swap')} Reset demo data</button>`:''}
+      <button class="btn ghost block" onclick="resetDemo()">${svg('swap')} Reset demo data</button>
+      `:''}
       <button class="btn dark block" onclick="closeModal();logout()">${svg('logout')} Sign out</button>
     </div>
     ${DB.mem?'<div class="banner warn" style="margin-top:12px"><div class="bi">'+svg('alert')+'</div><div><b>Running in memory only</b><p>Browser storage is blocked here. Open the downloaded file directly in a browser to save data, and use Backup to keep a copy.</p></div></div>':''}`);
