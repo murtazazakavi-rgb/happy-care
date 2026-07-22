@@ -302,7 +302,7 @@ function requireAdmin(){const u=currentUser();return u.role==='admin';}
 SCREENS.setup=function(){
   const u=currentUser(); const prog=DB.all('programs')[0]; const phs=DB.all('phases');
   const ph=currentPhase();
-  const staff=ph ? DB.filter('staff', s=>s.phaseId===ph.id).sort((a,b)=>a.name.localeCompare(b.name)) : [];
+  const staff=DB.all('staff').sort((a,b)=>a.name.localeCompare(b.name));
   return {title:'Setup', html:`
     ${u.role!=='admin'?'<div class="banner info"><div class="bi">'+svg('shield')+'</div><div><b>View only</b><p>Only Admin can change program setup.</p></div></div>':''}
     <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="eyebrow">Program</div><div class="serif" style="font-size:22px;font-weight:700;color:var(--wine)">${esc(prog?prog.name:'—')}</div><div class="muted" style="font-size:12px">Hijri year ${esc(prog?prog.year:'—')}</div></div>${u.role==='admin'?`<button class="btn ghost sm" onclick="editProgram()">${svg('edit')} Edit</button>`:''}</div></div>
@@ -554,7 +554,7 @@ function parseImportRows(){ const rows=parseCSV(rawval('imp-text')); if(rows.len
   return out; }
 function parseImportPreview(){ const rows=parseImportRows(); const el=$('#imp-preview'); if(!el)return; el.innerHTML=rows.length?`<div class="banner ok"><div class="bi">${svg('check')}</div><div><b>${rows.length} children ready to import</b><p>${rows.filter(r=>r.pits||r.pname).length} with a parent to link</p></div></div>`:'<div class="muted" style="font-size:12.5px">No valid rows detected yet.</div>'; }
 function runImport(){ const rows=parseImportRows(); if(!rows.length){toast('Nothing to import','err');return;} const ph=currentPhase(); let added=0,skipped=0,linked=0;
-  rows.forEach(r=>{ if(DB.find('children',c=>c.itsId===r.its)){skipped++;return;} const c=DB.insert('children',{itsId:r.its,name:r.name,dob:r.dob,phaseId:ph?ph.id:null,medicalAlert:r.med,assistNote:r.assist,active:true}); added++;
+  rows.forEach(r=>{ if(DB.find('children',c=>c.itsId===r.its)){skipped++;return;} const c=DB.insert('children',{itsId:r.its,name:r.name,dob:r.dob,phaseId:null,medicalAlert:r.med,assistNote:r.assist,active:true}); added++;
     if(r.pits&&r.pname){ let p=DB.find('parents',x=>x.itsId===r.pits); if(!p)p=DB.insert('parents',{itsId:r.pits,name:r.pname,relationship:r.rel||'Parent',mobile:r.pmob,authorisedPickup:true}); DB.insert('childParent',{childId:c.id,parentId:p.id,relationship:r.rel||'Parent'}); linked++; } });
   closeModal(); toast(`Imported ${added} · linked ${linked} parents · ${skipped} skipped`); render(); }
 
@@ -698,7 +698,7 @@ function openStaffPicker(groupId,slot){ const g=DB.byId('groups',groupId); windo
     <button class="btn ghost block" style="margin-bottom:10px" onclick="openStaffForm(0)">${svg('plus')} Add new staff member</button>
     <div id="sp-results" class="rows"></div>`); spSearch(); }
 function spSearch(){ const q=val('sp-search').toLowerCase(); const ph=currentPhase(); const assignedIds=new Set(DB.filter('groupStaff',x=>x.staffId).map(x=>x.staffId));
-  const list=DB.all('staff').filter(s=>(!ph||s.phaseId===ph.id)).filter(s=>!q||s.name.toLowerCase().includes(q)||(s.itsId||'').includes(q)).slice(0,12);
+  const list=DB.all('staff').filter(s=>!q||s.name.toLowerCase().includes(q)||(s.itsId||'').includes(q)).slice(0,12);
   $('#sp-results').innerHTML=list.map(s=>`<button class="row" onclick="assignStaffSlot(${s.id})"><div class="av">${initials(s.name)}</div><div class="meta"><div class="nm">${esc(s.name)}</div><div class="sm">${esc(s.role)} · ${esc(s.mobile||'')} ${assignedIds.has(s.id)?'<span class="tag">already assigned</span>':''}</div></div><div class="end">${svg('plus')}</div></button>`).join('')||'<div class="muted" style="font-size:12.5px">No staff. Add a new member above.</div>'; }
 function assignStaffSlot(staffId){ const {groupId,slot}=window.__pick; const ex=DB.find('groupStaff',x=>x.groupId===groupId&&x.slot===slot); if(ex)DB.update('groupStaff',ex.id,{staffId}); else DB.insert('groupStaff',{groupId,slot,staffId}); const g=DB.byId('groups',groupId); DB.update('groups',groupId,{status:groupReadiness(g).ready?'ready':'draft'}); closeModal(); toast('Staff assigned'); render(); }
 function openStaffForm(id){ const s=id?DB.byId('staff',id):{itsId:'',name:'',role:'Assistant Teacher',mobile:'',altMobile:'',visibleToParents:true,bankName:'',bankAccount:'',bankIfsc:'',panNumber:'',panImage:'',chequeImage:''}; const ph=currentPhase();
@@ -736,7 +736,7 @@ function openStaffForm(id){ const s=id?DB.byId('staff',id):{itsId:'',name:'',rol
     <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px"><input type="checkbox" id="sf-vis" ${s.visibleToParents!==false?'checked':''}> Visible to parents (name & contact shown on child profile)</label>`,
     `<button class="btn ghost block" onclick="closeModal()">Cancel</button><button class="btn block" onclick="saveStaff(${id||0})">Save</button>`); }
 function saveStaff(id){ const name=val('sf-name'); if(!name){toast('Name required','err');return;} const ph=currentPhase(); const itsId=val('sf-its').trim(); const role=$('#sf-role').value;
-  const rec={itsId,name,role,mobile:val('sf-mob'),altMobile:val('sf-alt'),visibleToParents:checked('sf-vis'),phaseId:ph?ph.id:null,
+  const rec={itsId,name,role,mobile:val('sf-mob'),altMobile:val('sf-alt'),visibleToParents:checked('sf-vis'),phaseId:null,
     bankName:val('sf-bank-name'),bankAccount:val('sf-bank-acc'),bankIfsc:val('sf-bank-ifsc'),panNumber:val('sf-pan-num'),panImage:val('sf-pan-img'),chequeImage:val('sf-cheque-img')};
   let savedStaff = null;
   if(id) savedStaff = DB.update('staff',id,rec); else savedStaff = DB.insert('staff',rec);
