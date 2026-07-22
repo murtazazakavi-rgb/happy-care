@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS "users" (
   "active" BOOLEAN DEFAULT TRUE,
   "parentId" INTEGER,
   "staffId" INTEGER,
-  "groupId" INTEGER
+  "groupId" INTEGER,
+  "needsPasswordChange" BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS "programs" (

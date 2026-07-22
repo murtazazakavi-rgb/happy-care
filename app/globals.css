@@ -378,3 +378,15 @@ body {
   background: linear-gradient(135deg, var(--wine) 0%, var(--wine-deep) 100%) !important;
   border: none !important;
 }
+
+/* First time password change fullscreen overlay */
+.pw-change-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--cream);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}

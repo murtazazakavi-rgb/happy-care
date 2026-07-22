@@ -293,9 +293,9 @@ function groupTimetable(g){ if(g.customTimetable&&g.customTimetable.length)retur
 function seed(){
   if(DB.all('meta').length) return;
   DB.insert('meta',{k:'seeded',v:true});
-  const acc=(itsId,name,role,pw,extra)=>{const salt=rndSalt();return DB.insert('users',Object.assign({itsId,name,role,salt,hash:hashPw(pw,salt),active:true},extra||{}));};
-  acc('10000001','Program Admin','admin','admin123');
-  acc('10000002','Zainab Kanchwala','supervisor','super123');
+  const acc=(itsId,name,role,pw,extra)=>{const salt=rndSalt();return DB.insert('users',Object.assign({itsId,name,role,salt,hash:hashPw(pw,salt),active:true,needsPasswordChange:true},extra||{}));};
+  acc('10000001','Program Admin','admin','happycare123');
+  acc('10000002','Zainab Kanchwala','supervisor','happycare123');
   const prog=DB.insert('programs',{name:'Happy Care · Istefada Ilmiyah',year:'1448'});
   const ph=DB.insert('phases',{programId:prog.id,name:'Phase 1',startDate:'2026-08-01',endDate:'2026-08-05',startTime:'08:00',endTime:'13:30',groupCount:10,maxPerGroup:35});
   genDates(ph.startDate,ph.endDate).forEach(d=>DB.insert('operatingDates',{phaseId:ph.id,date:d}));
@@ -344,15 +344,15 @@ function seed(){
   groups.forEach(g=>{ const r=groupReadiness(g); DB.update('groups',g.id,{status:r.ready?'ready':'draft'}); });
   // teacher account = main teacher of group 1
   const g1main=DB.find('groupStaff',x=>x.groupId===groups[0].id&&x.slot==='Main Teacher'); const mstaff=g1main&&DB.byId('staff',g1main.staffId);
-  if(mstaff){ acc(mstaff.itsId,mstaff.name,'teacher',mstaff.itsId.slice(-4)==='teach'?'teach123':'teach123',{staffId:mstaff.id,groupId:groups[0].id}); }
-  acc('10000004','Check-in Desk','checkin','desk123');
+  if(mstaff){ acc(mstaff.itsId,mstaff.name,'teacher','happycare123',{staffId:mstaff.id,groupId:groups[0].id}); }
+  acc('10000004','Check-in Desk','checkin','happycare123');
   // demo parent account: link to a parent with 2 children in a group + attendance + query
   const demoLink=DB.find('childParent',l=>{ const sibs=DB.filter('childParent',x=>x.parentId===l.parentId); return sibs.length>=2 && sibs.every(s=>childGroupId(s.childId,ph.id)); });
   let demoParent;
   if(demoLink){ demoParent=DB.byId('parents',demoLink.parentId); }
   else { demoParent=parents.find(p=>parentChildren(p.id).some(c=>childGroupId(c.id,ph.id))) || parents[0]; }
   DB.update('parents',demoParent.id,{name:'Sakina Ali',mobile:'9820011234'});
-  acc(demoParent.itsId,'Sakina Ali','parent','parent123',{parentId:demoParent.id});
+  acc(demoParent.itsId,'Sakina Ali','parent','happycare123',{parentId:demoParent.id});
   window.__demoParentITS=demoParent.itsId;
   // seed attendance for demo parent's children on first date + a query
   const d0=phaseDates(ph.id)[0];
@@ -368,6 +368,10 @@ function seed(){
 const SCREENS={};
 function render(){
   const u=currentUser();
+  if(u && u.needsPasswordChange){
+    $('#app').innerHTML = renderChangePasswordScreen(u);
+    return;
+  }
   if(!u){ $('#app').innerHTML=SCREENS.login(); wireLogin(); return; }
   const isParent=u.role==='parent';
   const nav=isParent?PARENT_NAV:STAFF_NAV;
@@ -439,14 +443,15 @@ SCREENS.login=function(){
     <div class="field"><label>${loginMode==='parent'?'Parent ITS ID':'ITS ID'}</label><input class="control" id="li-its" inputmode="numeric" placeholder="e.g. ${loginMode==='parent'?(window.__demoParentITS||'6000001'):'10000001'}" style="transition:transform 0.15s ease"></div>
     <div class="field"><label>Password</label><input class="control" id="li-pw" type="password" placeholder="Enter password" style="transition:transform 0.15s ease"></div>
     <button class="btn block lg" id="li-go" style="margin-top:6px">${svg('key')} Sign in</button>
+    <div style="text-align:center;margin-top:14px"><button class="linkbtn" style="font-size:12.5px;color:var(--ink-soft);font-weight:600;display:inline-flex;align-items:center;gap:5px" onclick="openForgotPassword()">${svg('lock')} Forgot password?</button></div>
     
     <div class="demo-accounts-grid">
       <div style="font-size:10px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:9px;text-align:center">Quick Sandbox Logins</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="demo-badge-btn" onclick="fillQuickLogin('10000001','admin123')">🔑 Admin</button>
-        <button class="demo-badge-btn" onclick="fillQuickLogin('10000002','super123')">🛡️ Supervisor</button>
-        <button class="demo-badge-btn" onclick="fillQuickLogin('${window.__demoParentITS||'6000001'}','parent123')">👨‍👩‍👦 Parent</button>
-        <button class="demo-badge-btn" onclick="fillQuickLogin('10000004','desk123')">🎟️ Check-In</button>
+        <button class="demo-badge-btn" onclick="fillQuickLogin('10000001','happycare123')">🔑 Admin</button>
+        <button class="demo-badge-btn" onclick="fillQuickLogin('10000002','happycare123')">🛡️ Supervisor</button>
+        <button class="demo-badge-btn" onclick="fillQuickLogin('${window.__demoParentITS||'6000001'}','happycare123')">👨‍👩‍👦 Parent</button>
+        <button class="demo-badge-btn" onclick="fillQuickLogin('10000004','happycare123')">🎟️ Check-In</button>
       </div>
     </div>
   </div></div>`;
@@ -547,8 +552,11 @@ SCREENS.setup=function(){
           <div class="av" style="width:34px;height:34px">${initials(s.name)}</div>
           <div class="meta"><div class="nm" style="font-size:13.5px">${esc(s.name)} <span class="tag" style="margin-left:6px">${esc(s.role)}</span></div>
             <div class="sm">ITS ${esc(s.itsId||'—')} · Mobile ${esc(s.mobile||'—')} · ${s.visibleToParents?'Visible to parents':'Private'}</div></div>
-          ${u.role==='admin'?`<div class="end"><button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto" onclick="openStaffForm(${s.id})">${svg('edit')}</button>
-            <button class="xbtn" style="width:30px;height:30px" onclick="deleteStaff(${s.id})">${svg('trash')}</button></div>`:''}
+          ${u.role==='admin'?`<div class="end">
+            <button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto;color:var(--warn)" title="Reset password to default" onclick="adminResetUserPassword(${s.id},'${s.name.replace("'","\\'")}')">${svg('key')}</button>
+            <button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto" onclick="openStaffForm(${s.id})">${svg('edit')}</button>
+            <button class="xbtn" style="width:30px;height:30px" onclick="deleteStaff(${s.id})">${svg('trash')}</button>
+          </div>`:''}
         </div>`).join(''):'<div class="muted" style="font-size:12.5px;text-align:center;padding:12px">No staff in this phase. Click Add staff to populate.</div>'}
       </div>
     </div>`};
@@ -1164,6 +1172,139 @@ SCREENS['p-account']=function(){ const p=parentSelf(); const u=currentUser(); co
 
 /* ---------- next module ---------- */
 
+
+
+window.fillQuickLogin = function(its, pw) {
+  const itsEl = document.getElementById('li-its');
+  const pwEl = document.getElementById('li-pw');
+  if (itsEl && pwEl) {
+    if (its.startsWith('600')) {
+      if (loginMode !== 'parent') {
+        setLoginMode('parent');
+        setTimeout(() => {
+          document.getElementById('li-its').value = its;
+          document.getElementById('li-pw').value = pw;
+          document.getElementById('li-go').click();
+        }, 120);
+        return;
+      }
+    } else {
+      if (loginMode !== 'staff') {
+        setLoginMode('staff');
+        setTimeout(() => {
+          document.getElementById('li-its').value = its;
+          document.getElementById('li-pw').value = pw;
+          document.getElementById('li-go').click();
+        }, 120);
+        return;
+      }
+    }
+    itsEl.value = its;
+    pwEl.value = pw;
+    itsEl.style.transform = 'scale(1.02)';
+    pwEl.style.transform = 'scale(1.02)';
+    setTimeout(() => {
+      itsEl.style.transform = 'none';
+      pwEl.style.transform = 'none';
+      document.getElementById('li-go').click();
+    }, 150);
+  }
+};
+
+function renderChangePasswordScreen(u) {
+  return `<div class="pw-change-overlay"><div class="login-card" style="max-width:420px">
+    <div class="eyebrow" style="text-align:center;letter-spacing:0.18em;margin-bottom:6px;color:var(--gold);font-weight:700">SECURITY SETUP</div>
+    <h2 style="font-family:var(--serif);font-size:26px;color:var(--wine);text-align:center;margin-bottom:8px">Set Custom Password</h2>
+    <p class="muted" style="font-size:13px;text-align:center;margin-bottom:18px">First time logging in? Please create a secure password to access your Happy Care dashboard.</p>
+    <div class="field"><label>New Password</label><input class="control" type="password" id="pwc-new" placeholder="Enter new password"></div>
+    <div class="field"><label>Confirm Password</label><input class="control" type="password" id="pwc-conf" placeholder="Confirm your password"></div>
+    <button class="btn block lg" onclick="saveCustomPassword(${u.id})">${svg('check')} Set Password</button>
+  </div></div>`;
+}
+
+function saveCustomPassword(userId) {
+  const pw = val('pwc-new'), conf = val('pwc-conf');
+  if(!pw) { toast('Enter a new password','err'); return; }
+  if(pw.length < 4) { toast('Password must be at least 4 characters','err'); return; }
+  if(pw !== conf) { toast('Passwords do not match','err'); return; }
+  
+  const u = DB.byId('users', userId);
+  if(u) {
+    const salt = rndSalt();
+    DB.update('users', userId, {
+      salt: salt,
+      hash: hashPw(pw, salt),
+      needsPasswordChange: false
+    });
+    toast('Password set successfully!');
+    render();
+  }
+}
+
+function openForgotPassword() {
+  openModal('Reset Password', `
+    <p class="muted" style="font-size:12.5px;margin-bottom:12px">Enter your registered ITS ID and Mobile Number to reset your password to default.</p>
+    <div class="field"><label>ITS ID</label><input class="control" id="fp-its" inputmode="numeric" placeholder="e.g. 10000001"></div>
+    <div class="field"><label>Registered Mobile Number</label><input class="control" id="fp-mob" inputmode="tel" placeholder="e.g. 9820011234"></div>
+  `, `
+    <button class="btn ghost block" onclick="closeModal()">Cancel</button>
+    <button class="btn block" onclick="submitForgotPassword()">${svg('swap')} Reset Password</button>
+  `);
+}
+
+function submitForgotPassword() {
+  const its = val('fp-its'), mob = val('fp-mob');
+  if(!its || !mob) { toast('ITS ID and Mobile Number are required','err'); return; }
+  
+  const u = DB.find('users', x => x.itsId === its.trim());
+  if(!u) { toast('No user account matches that ITS ID','err'); return; }
+  
+  let record = null;
+  if(u.role === 'parent') {
+    record = DB.byId('parents', u.parentId);
+  } else {
+    record = DB.byId('staff', u.staffId) || DB.find('staff', x => x.itsId === its.trim());
+  }
+  
+  if(!record || !record.mobile || record.mobile.trim() !== mob.trim()) {
+    toast('Mobile number does not match registered records','err');
+    return;
+  }
+  
+  const salt = rndSalt();
+  DB.update('users', u.id, {
+    salt: salt,
+    hash: hashPw('happycare123', salt),
+    needsPasswordChange: true
+  });
+  
+  closeModal();
+  openModal('Password Reset Success', `
+    <div class="banner ok"><div class="bi">${svg('check')}</div>
+      <div><b>Password Reset Successful</b>
+        <p>Your password has been reset back to the default: <b style="font-size:13px;color:var(--wine)">happycare123</b></p>
+      </div>
+    </div>
+    <p style="font-size:12.5px;margin-top:12px;color:var(--ink-soft)">Please sign in using the default password. You will be prompted to create your own secure custom password immediately.</p>
+  `, `<button class="btn block" onclick="closeModal()">OK</button>`);
+}
+
+function adminResetUserPassword(userId, userName) {
+  if(!confirm('Reset password for ' + userName + ' back to the default "happycare123"?')) return;
+  const u = DB.find('users', x => x.parentId === userId || x.staffId === userId || (x.role === 'parent' && DB.byId('parents', x.parentId)?.id === userId));
+  const userObj = u || DB.byId('users', userId);
+  if(userObj) {
+    const salt = rndSalt();
+    DB.update('users', userObj.id, {
+      salt: salt,
+      hash: hashPw('happycare123', salt),
+      needsPasswordChange: true
+    });
+    toast('Password reset to default for ' + userName);
+  } else {
+    toast('No user account linked to reset','err');
+  }
+}
 
 /* BOOT */
 async function boot(){
