@@ -222,7 +222,7 @@ function render(){
     <header class="appbar">
       <div class="tt"><div class="ey">Happy Care · Istefada Ilmiyah</div><h1>${esc(scr.title||'Happy Care')}</h1></div>
       <div class="who"><button class="iconbtn" onclick="openMenu()" title="Menu">${svg('list')}</button>
-        <button class="av" onclick="openMenu()">${initials(u.name)}</button></div>
+        <button class="av" onclick="go(isParent?'p-account':'staff-profile')">${initials(u.name)}</button></div>
     </header>
     <div class="wrap">
       ${showCtx?ctxbar(['today','attendance-child','checkin','checkout','closing'].includes(route)):''}
@@ -247,7 +247,6 @@ function openMenu(){
     <div class="row" style="margin-bottom:12px"><div class="av" style="background:var(--gold-100);color:var(--gold)">${initials(u.name)}</div>
       <div class="meta"><div class="nm">${esc(u.name)}</div><div class="sm">${ROLE_LABEL[u.role]} · ITS ${esc(u.itsId)}</div></div></div>
     <div class="stack">
-      ${u.staffId?`<button class="btn ghost block" style="margin-bottom:10px" onclick="closeModal();openStaffFinancialModal()">${svg('card')} Bank & PAN Details</button>`:''}
       ${u.role==='admin'?`
       <button class="btn ghost block" onclick="closeModal();backupData()">${svg('download')} Backup all data (JSON)</button>
       <button class="btn ghost block" onclick="closeModal();restoreData()">${svg('upload')} Restore from backup</button>
@@ -1262,6 +1261,83 @@ function saveStaffFinancials(staffId) {
   closeModal();
   toast('Financial details updated successfully!');
   render();
+}
+
+
+SCREENS['staff-profile']=function(){
+  const u=currentUser();
+  if(!u.staffId) {
+    return {title:'Profile', html:emptyState('lock','Access Denied','Profile page is only for registered staff members.',`Base Admin accounts can manage settings from the Setup tab.`)};
+  }
+  const s=DB.byId('staff', u.staffId);
+  if(!s) {
+    return {title:'Profile', html:emptyState('lock','Profile Not Found','No staff record matches your account.',``)};
+  }
+  
+  return {title:'My Profile', html:`
+    <div class="card" style="margin-bottom:16px">
+      <div class="row" style="border:none;box-shadow:none;padding:0">
+        <div class="av" style="width:52px;height:52px;background:var(--gold-100);color:var(--gold);font-size:18px">${initials(s.name)}</div>
+        <div class="meta">
+          <div class="nm" style="font-size:16px;font-weight:700">${esc(s.name)}</div>
+          <div class="sm">${esc(s.role)} · <span class="mono">ITS ${esc(s.itsId||'—')}</span></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="font-family:var(--serif);font-size:18px;color:var(--wine);margin-bottom:12px;font-weight:700">Contact Details</h3>
+      <div class="formrow two">
+        <div class="field"><label>Mobile Number</label><input class="control" id="mysf-mob" value="${esc(s.mobile||'')}"></div>
+        <div class="field"><label>Alternate Mobile</label><input class="control" id="mysf-alt" value="${esc(s.altMobile||'')}"></div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="font-family:var(--serif);font-size:18px;color:var(--wine);margin-bottom:12px;font-weight:700">Bank & Verification Documents</h3>
+      <div class="formrow two">
+        <div class="field"><label>Bank Name</label><input class="control" id="mysf-bank-name" value="${esc(s.bankName||'')}"></div>
+        <div class="field"><label>Account Number</label><input class="control" id="mysf-bank-acc" value="${esc(s.bankAccount||'')}"></div>
+      </div>
+      <div class="formrow two">
+        <div class="field"><label>IFSC Code</label><input class="control" id="mysf-bank-ifsc" value="${esc(s.bankIfsc||'')}"></div>
+        <div class="field"><label>PAN Card Number</label><input class="control" id="mysf-pan-num" value="${esc(s.panNumber||'')}"></div>
+      </div>
+      <div class="formrow two" style="margin-top:10px">
+        <div class="field"><label>PAN Card Image</label>
+          <input type="file" accept="image/*" id="mysf-pan-img-file" onchange="uploadStaffDocument(this, 'panImage', 'mysf-pan-img', 'mysf-pan-preview')" style="font-size:12px">
+          <input type="hidden" id="mysf-pan-img" value="${s.panImage||''}">
+          <div id="mysf-pan-preview" style="margin-top:8px">${s.panImage ? `<img src="${s.panImage}" style="height:60px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in" onclick="previewImage('${s.panImage.replace("'","\\'")}', 'PAN Card')">` : '<span class="muted" style="font-size:12px">No upload</span>'}</div>
+        </div>
+        <div class="field"><label>Cancelled Cheque Image</label>
+          <input type="file" accept="image/*" id="mysf-cheque-img-file" onchange="uploadStaffDocument(this, 'chequeImage', 'mysf-cheque-img', 'mysf-cheque-preview')" style="font-size:12px">
+          <input type="hidden" id="mysf-cheque-img" value="${s.chequeImage||''}">
+          <div id="mysf-cheque-preview" style="margin-top:8px">${s.chequeImage ? `<img src="${s.chequeImage}" style="height:60px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in" onclick="previewImage('${s.chequeImage.replace("'","\\'")}', 'Cancelled Cheque')">` : '<span class="muted" style="font-size:12px">No upload</span>'}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:12px;margin-top:20px">
+      <button class="btn block lg" style="flex:1" onclick="saveStaffProfile(${s.id})">${svg('check')} Save Profile Details</button>
+      <button class="btn dark block lg" style="flex:none;width:50px;padding:0" title="Sign out" onclick="logout()">${svg('logout')}</button>
+    </div>
+  `};
+};
+
+function saveStaffProfile(staffId) {
+  const rec = {
+    mobile: val('mysf-mob'),
+    altMobile: val('mysf-alt'),
+    bankName: val('mysf-bank-name'),
+    bankAccount: val('mysf-bank-acc'),
+    bankIfsc: val('mysf-bank-ifsc'),
+    panNumber: val('mysf-pan-num'),
+    panImage: val('mysf-pan-img'),
+    chequeImage: val('mysf-cheque-img')
+  };
+  DB.update('staff', staffId, rec);
+  toast('Profile and financial documents updated!');
+  go('today');
 }
 
 /* BOOT */
