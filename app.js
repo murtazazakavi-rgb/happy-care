@@ -247,6 +247,7 @@ function openMenu(){
     <div class="row" style="margin-bottom:12px"><div class="av" style="background:var(--gold-100);color:var(--gold)">${initials(u.name)}</div>
       <div class="meta"><div class="nm">${esc(u.name)}</div><div class="sm">${ROLE_LABEL[u.role]} · ITS ${esc(u.itsId)}</div></div></div>
     <div class="stack">
+      ${u.staffId?`<button class="btn ghost block" style="margin-bottom:10px" onclick="closeModal();openStaffFinancialModal()">${svg('card')} Bank & PAN Details</button>`:''}
       ${u.role==='admin'?`
       <button class="btn ghost block" onclick="closeModal();backupData()">${svg('download')} Backup all data (JSON)</button>
       <button class="btn ghost block" onclick="closeModal();restoreData()">${svg('upload')} Restore from backup</button>
@@ -697,15 +698,42 @@ function spSearch(){ const q=val('sp-search').toLowerCase(); const ph=currentPha
   const list=DB.all('staff').filter(s=>(!ph||s.phaseId===ph.id)).filter(s=>!q||s.name.toLowerCase().includes(q)||(s.itsId||'').includes(q)).slice(0,12);
   $('#sp-results').innerHTML=list.map(s=>`<button class="row" onclick="assignStaffSlot(${s.id})"><div class="av">${initials(s.name)}</div><div class="meta"><div class="nm">${esc(s.name)}</div><div class="sm">${esc(s.role)} · ${esc(s.mobile||'')} ${assignedIds.has(s.id)?'<span class="tag">already assigned</span>':''}</div></div><div class="end">${svg('plus')}</div></button>`).join('')||'<div class="muted" style="font-size:12.5px">No staff. Add a new member above.</div>'; }
 function assignStaffSlot(staffId){ const {groupId,slot}=window.__pick; const ex=DB.find('groupStaff',x=>x.groupId===groupId&&x.slot===slot); if(ex)DB.update('groupStaff',ex.id,{staffId}); else DB.insert('groupStaff',{groupId,slot,staffId}); const g=DB.byId('groups',groupId); DB.update('groups',groupId,{status:groupReadiness(g).ready?'ready':'draft'}); closeModal(); toast('Staff assigned'); render(); }
-function openStaffForm(id){ const s=id?DB.byId('staff',id):{itsId:'',name:'',role:'Assistant Teacher',mobile:'',altMobile:'',visibleToParents:true}; const ph=currentPhase();
+function openStaffForm(id){ const s=id?DB.byId('staff',id):{itsId:'',name:'',role:'Assistant Teacher',mobile:'',altMobile:'',visibleToParents:true,bankName:'',bankAccount:'',bankIfsc:'',panNumber:'',panImage:'',chequeImage:''}; const ph=currentPhase();
   openModal(id?'Edit staff':'Add staff',`
     <div class="formrow two"><div class="field"><label>Staff ITS ID</label><input class="control" id="sf-its" value="${esc(s.itsId||'')}"></div>
       <div class="field"><label>Role</label><select class="control" id="sf-role">${['Main Teacher','Assistant Teacher','Talebaat','Maid','Coordinator','Medical Support','Supervisor'].map(r=>`<option ${s.role===r?'selected':''}>${r}</option>`).join('')}</select></div></div>
     <div class="field"><label>Full name <span class="req">*</span></label><input class="control" id="sf-name" value="${esc(s.name)}"></div>
     <div class="formrow two"><div class="field"><label>Mobile</label><input class="control" id="sf-mob" value="${esc(s.mobile||'')}"></div><div class="field"><label>Alternate</label><input class="control" id="sf-alt" value="${esc(s.altMobile||'')}"></div></div>
-    <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer"><input type="checkbox" id="sf-vis" ${s.visibleToParents!==false?'checked':''}> Visible to parents (name & contact shown on child profile)</label>`,
+    
+    <!-- Bank & Document Section -->
+    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px">
+      <h4 style="font-family:var(--serif);font-size:15px;color:var(--wine);margin-bottom:12px;font-weight:700">Bank & Verification Details</h4>
+      <div class="formrow two">
+        <div class="field"><label>Bank Name</label><input class="control" id="sf-bank-name" value="${esc(s.bankName||'')}"></div>
+        <div class="field"><label>Account Number</label><input class="control" id="sf-bank-acc" value="${esc(s.bankAccount||'')}"></div>
+      </div>
+      <div class="formrow two">
+        <div class="field"><label>IFSC Code</label><input class="control" id="sf-bank-ifsc" value="${esc(s.bankIfsc||'')}"></div>
+        <div class="field"><label>PAN Card Number</label><input class="control" id="sf-pan-num" value="${esc(s.panNumber||'')}"></div>
+      </div>
+      <div class="formrow two" style="margin-top:10px">
+        <div class="field"><label>PAN Card Image</label>
+          <input type="file" accept="image/*" id="sf-pan-img-file" onchange="uploadStaffDocument(this, 'panImage', 'sf-pan-img', 'sf-pan-preview')" style="font-size:12px">
+          <input type="hidden" id="sf-pan-img" value="${s.panImage||''}">
+          <div id="sf-pan-preview" style="margin-top:8px">${s.panImage ? `<img src="${s.panImage}" style="height:60px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in" onclick="previewImage('${s.panImage.replace("'","\\'")}', 'PAN Card')">` : '<span class="muted" style="font-size:12px">No upload</span>'}</div>
+        </div>
+        <div class="field"><label>Cancelled Cheque Image</label>
+          <input type="file" accept="image/*" id="sf-cheque-img-file" onchange="uploadStaffDocument(this, 'chequeImage', 'sf-cheque-img', 'sf-cheque-preview')" style="font-size:12px">
+          <input type="hidden" id="sf-cheque-img" value="${s.chequeImage||''}">
+          <div id="sf-cheque-preview" style="margin-top:8px">${s.chequeImage ? `<img src="${s.chequeImage}" style="height:60px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in" onclick="previewImage('${s.chequeImage.replace("'","\\'")}', 'Cancelled Cheque')">` : '<span class="muted" style="font-size:12px">No upload</span>'}</div>
+        </div>
+      </div>
+    </div>
+    
+    <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px"><input type="checkbox" id="sf-vis" ${s.visibleToParents!==false?'checked':''}> Visible to parents (name & contact shown on child profile)</label>`,
     `<button class="btn ghost block" onclick="closeModal()">Cancel</button><button class="btn block" onclick="saveStaff(${id||0})">Save</button>`); }
-function saveStaff(id){ const name=val('sf-name'); if(!name){toast('Name required','err');return;} const ph=currentPhase(); const rec={itsId:val('sf-its'),name,role:$('#sf-role').value,mobile:val('sf-mob'),altMobile:val('sf-alt'),visibleToParents:checked('sf-vis'),phaseId:ph?ph.id:null};
+function saveStaff(id){ const name=val('sf-name'); if(!name){toast('Name required','err');return;} const ph=currentPhase(); const rec={itsId:val('sf-its'),name,role:$('#sf-role').value,mobile:val('sf-mob'),altMobile:val('sf-alt'),visibleToParents:checked('sf-vis'),phaseId:ph?ph.id:null,
+    bankName:val('sf-bank-name'),bankAccount:val('sf-bank-acc'),bankIfsc:val('sf-bank-ifsc'),panNumber:val('sf-pan-num'),panImage:val('sf-pan-img'),chequeImage:val('sf-cheque-img')};
   if(id)DB.update('staff',id,rec); else DB.insert('staff',rec); closeModal(); toast('Staff saved'); render(); }
 function deleteStaff(id){ if(!confirm('Are you sure you want to remove this staff member?'))return; DB.filter('groupStaff',x=>x.staffId===id).forEach(x=>DB.remove('groupStaff',x.id)); DB.remove('staff',id); toast('Staff member removed'); render(); }
 
@@ -1138,6 +1166,102 @@ function adminResetUserPassword(userId, userName) {
   } else {
     toast('No user account linked to reset','err');
   }
+}
+
+
+function uploadStaffDocument(inputEl, fieldName, hiddenInputId, previewContainerId) {
+  const file = inputEl.files[0];
+  if(!file) return;
+  
+  const previewEl = document.getElementById(previewContainerId);
+  if(previewEl) previewEl.innerHTML = '<span style="font-size:12px;color:var(--wine)">Uploading & compressing...</span>';
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      const max = 600;
+      if (w > max || h > max) {
+        if (w > h) { h = Math.round(h * max / w); w = max; }
+        else { w = Math.round(w * max / h); h = max; }
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.65);
+      
+      const hiddenEl = document.getElementById(hiddenInputId);
+      if(hiddenEl) hiddenEl.value = base64;
+      
+      if(previewEl) {
+        previewEl.innerHTML = `<img src="${base64}" style="height:60px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in" onclick="previewImage('${base64.replace("'","\\'")}', '${fieldName === 'panImage' ? 'PAN Card' : 'Cancelled Cheque'}')">`;
+      }
+      toast('Document uploaded');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewImage(base64, title) {
+  openModal(title, `
+    <div style="text-align:center;padding:10px">
+      <img src="${base64}" style="max-width:100%;max-height:70vh;border-radius:8px;box-shadow:var(--shadow);border:1px solid var(--line)">
+      <div style="margin-top:16px"><a href="${base64}" download="${title.toLowerCase().replace(' ', '_')}.jpg" class="btn sm" style="display:inline-flex;align-items:center;gap:6px">${svg('download')} Download Image</a></div>
+    </div>
+  `);
+}
+
+function openStaffFinancialModal() {
+  const u = currentUser();
+  if(!u.staffId) return;
+  const s = DB.byId('staff', u.staffId);
+  if(!s) { toast('Staff profile not found','err'); return; }
+  
+  openModal('My Bank & PAN Details', `
+    <p class="muted" style="font-size:12.5px;margin-bottom:14px">Provide your bank account details and upload verification documents for payouts.</p>
+    <div class="formrow two">
+      <div class="field"><label>Bank Name</label><input class="control" id="mysf-bank-name" value="${esc(s.bankName||'')}"></div>
+      <div class="field"><label>Account Number</label><input class="control" id="mysf-bank-acc" value="${esc(s.bankAccount||'')}"></div>
+    </div>
+    <div class="formrow two">
+      <div class="field"><label>IFSC Code</label><input class="control" id="mysf-bank-ifsc" value="${esc(s.bankIfsc||'')}"></div>
+      <div class="field"><label>PAN Card Number</label><input class="control" id="mysf-pan-num" value="${esc(s.panNumber||'')}"></div>
+    </div>
+    <div class="formrow two" style="margin-top:10px">
+      <div class="field"><label>PAN Card Image</label>
+        <input type="file" accept="image/*" id="mysf-pan-img-file" onchange="uploadStaffDocument(this, 'panImage', 'mysf-pan-img', 'mysf-pan-preview')" style="font-size:12px">
+        <input type="hidden" id="mysf-pan-img" value="${s.panImage||''}">
+        <div id="mysf-pan-preview" style="margin-top:8px">${s.panImage ? `<img src="${s.panImage}" style="height:60px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in" onclick="previewImage('${s.panImage.replace("'","\\'")}', 'PAN Card')">` : '<span class="muted" style="font-size:12px">No upload</span>'}</div>
+      </div>
+      <div class="field"><label>Cancelled Cheque Image</label>
+        <input type="file" accept="image/*" id="mysf-cheque-img-file" onchange="uploadStaffDocument(this, 'chequeImage', 'mysf-cheque-img', 'mysf-cheque-preview')" style="font-size:12px">
+        <input type="hidden" id="mysf-cheque-img" value="${s.chequeImage||''}">
+        <div id="mysf-cheque-preview" style="margin-top:8px">${s.chequeImage ? `<img src="${s.chequeImage}" style="height:60px;border-radius:6px;border:1px solid var(--line);cursor:zoom-in" onclick="previewImage('${s.chequeImage.replace("'","\\'")}', 'Cancelled Cheque')">` : '<span class="muted" style="font-size:12px">No upload</span>'}</div>
+      </div>
+    </div>
+  `, `
+    <button class="btn ghost block" onclick="closeModal()">Cancel</button>
+    <button class="btn block" onclick="saveStaffFinancials(${s.id})">Save Details</button>
+  `);
+}
+
+function saveStaffFinancials(staffId) {
+  const rec = {
+    bankName: val('mysf-bank-name'),
+    bankAccount: val('mysf-bank-acc'),
+    bankIfsc: val('mysf-bank-ifsc'),
+    panNumber: val('mysf-pan-num'),
+    panImage: val('mysf-pan-img'),
+    chequeImage: val('mysf-cheque-img')
+  };
+  DB.update('staff', staffId, rec);
+  closeModal();
+  toast('Financial details updated successfully!');
+  render();
 }
 
 /* BOOT */
