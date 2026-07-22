@@ -432,17 +432,22 @@ function closeModal(){ $('#modal-root').innerHTML=''; }
 let loginMode='staff';
 SCREENS.login=function(){
   return `<div class="login"><div class="login-card">
-    <div class="eyebrow">Istefada Ilmiyah</div>
-    <h1>Happy Care</h1>
-    <div class="tag">An initiative by Daeratul Aqeeq</div>
+    <div class="eyebrow" style="text-align:center;letter-spacing:0.18em;margin-bottom:4px;color:var(--gold);font-weight:700">ISTEFADA ILMIYAH</div>
+    <h1 style="font-size:38px;font-weight:700;color:var(--wine);text-align:center;line-height:1;margin-bottom:2px;letter-spacing:-0.02em">Happy Care</h1>
+    <div class="tag" style="text-align:center;font-size:12px;color:var(--ink-soft);margin:2px 0 20px;font-style:italic">An initiative by Daeratul Aqeeq</div>
     <div class="seg"><button id="lm-staff" class="${loginMode==='staff'?'on':''}" onclick="setLoginMode('staff')">Staff</button><button id="lm-parent" class="${loginMode==='parent'?'on':''}" onclick="setLoginMode('parent')">Parent</button></div>
-    <div class="field"><label>${loginMode==='parent'?'Parent ITS ID':'ITS ID'}</label><input class="control" id="li-its" inputmode="numeric" placeholder="e.g. ${loginMode==='parent'?(window.__demoParentITS||'6000001'):'10000001'}"></div>
-    <div class="field"><label>Password</label><input class="control" id="li-pw" type="password" placeholder="Enter password"></div>
-    <button class="btn block lg" id="li-go">${svg('key')} Sign in</button>
-    <div class="demo">
-      ${loginMode==='parent'
-        ? `<b>Demo parent</b> — ITS <b>${esc(window.__demoParentITS||'6000001')}</b> · password <b>parent123</b>`
-        : `<b>Demo accounts</b><br>Admin ITS <b>10000001</b> · <b>admin123</b><br>Supervisor <b>10000002</b> · <b>super123</b><br>Check-in <b>10000004</b> · <b>desk123</b>`}
+    <div class="field"><label>${loginMode==='parent'?'Parent ITS ID':'ITS ID'}</label><input class="control" id="li-its" inputmode="numeric" placeholder="e.g. ${loginMode==='parent'?(window.__demoParentITS||'6000001'):'10000001'}" style="transition:transform 0.15s ease"></div>
+    <div class="field"><label>Password</label><input class="control" id="li-pw" type="password" placeholder="Enter password" style="transition:transform 0.15s ease"></div>
+    <button class="btn block lg" id="li-go" style="margin-top:6px">${svg('key')} Sign in</button>
+    
+    <div class="demo-accounts-grid">
+      <div style="font-size:10px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:9px;text-align:center">Quick Sandbox Logins</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="demo-badge-btn" onclick="fillQuickLogin('10000001','admin123')">🔑 Admin</button>
+        <button class="demo-badge-btn" onclick="fillQuickLogin('10000002','super123')">🛡️ Supervisor</button>
+        <button class="demo-badge-btn" onclick="fillQuickLogin('${window.__demoParentITS||'6000001'}','parent123')">👨‍👩‍👦 Parent</button>
+        <button class="demo-badge-btn" onclick="fillQuickLogin('10000004','desk123')">🎟️ Check-In</button>
+      </div>
     </div>
   </div></div>`;
 };

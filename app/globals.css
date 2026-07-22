@@ -253,3 +253,128 @@ table.data tr:hover td{background:var(--surface-soft)}
 .tabbar{display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:14px}
 .tabbar button{flex:none;padding:10px 4px;font-size:13px;font-weight:700;color:var(--ink-faint);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tabbar button.on{color:var(--wine);border-bottom-color:var(--wine)}
+
+/* ============================================================
+   UI/UX PREMIUM ENHANCEMENTS
+   ============================================================ */
+body {
+  background: radial-gradient(circle at 10% 20%, rgba(142, 168, 157, 0.15) 0%, transparent 45%), 
+              radial-gradient(circle at 90% 80%, rgba(143, 174, 198, 0.18) 0%, transparent 45%), 
+              radial-gradient(circle at 50% 50%, rgba(253, 250, 244, 0.4) 0%, #F3ECDF 100%) !important;
+}
+
+/* Frosted glass cards */
+.login-card {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 16px 36px rgba(58, 43, 38, 0.07) !important;
+  border-radius: 26px !important;
+}
+
+.demo-accounts-grid {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(58, 43, 38, 0.08);
+}
+
+.demo-badge-btn {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-align: center;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.demo-badge-btn:hover {
+  background: var(--wine-100);
+  color: var(--wine);
+  border-color: var(--wine-200);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(154, 39, 73, 0.08);
+}
+.demo-badge-btn:active {
+  transform: translateY(0);
+}
+
+.seg {
+  background: rgba(58, 43, 38, 0.05) !important;
+  border-radius: 14px !important;
+  padding: 4px !important;
+}
+
+.seg button {
+  border-radius: 10px !important;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.seg button.on {
+  box-shadow: 0 2px 8px rgba(58, 43, 38, 0.08) !important;
+}
+
+.control {
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1.5px solid var(--line) !important;
+  transition: all 0.2s ease !important;
+}
+
+.control:focus {
+  border-color: var(--wine) !important;
+  box-shadow: 0 0 0 4px var(--wine-100) !important;
+  background: #ffffff !important;
+}
+
+/* Hover lifts for grids and list rows */
+.row {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, border-color 0.2s !important;
+}
+.row:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: var(--wine-200) !important;
+}
+
+.gcard {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s !important;
+}
+.gcard:hover {
+  transform: translateY(-2.5px);
+  box-shadow: var(--shadow);
+}
+
+.tile {
+  transition: transform 0.2s ease !important;
+}
+.tile:hover {
+  transform: translateY(-1.5px);
+}
+
+.btn {
+  border-radius: 12px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn.lg {
+  box-shadow: 0 4px 12px rgba(154, 39, 73, 0.2) !important;
+  background: linear-gradient(135deg, var(--wine) 0%, var(--wine-deep) 100%) !important;
+  border: none !important;
+}
