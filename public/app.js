@@ -30,15 +30,6 @@ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8 2 2-2 2 2 2-3 3-2-2"/>',p
 };
 function svg(n,cls){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${cls?`class="${cls}"`:''}>${I[n]||''}</svg>`}
 const HC_PETALS=Array.from({length:8},(_,k)=>`<ellipse cx="60" cy="44.5" rx="3.1" ry="6" fill="#E7A6BF" transform="rotate(${k*45} 60 52)"/>`).join('');
-const LOGO=`<svg viewBox="0 0 120 138" fill="none" aria-label="Happy Care">
-<circle cx="60" cy="5" r="1.9" fill="#1C4D37"/><path d="M60 8 C61.6 11 64 12.4 64 15.2 C64 17.8 62.1 19.4 60 19.4 C57.9 19.4 56 17.8 56 15.2 C56 12.4 58.4 11 60 8 Z" fill="#1C4D37"/>
-<path d="M60 18 C46 31 26 45 24 70 C22.4 92 40 112 60 126 C80 112 97.6 92 96 70 C94 45 74 31 60 18 Z" stroke="#1C4D37" stroke-width="3.1" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M60 31 C55 41 47.5 40.5 44.5 47.5 C42.7 51.6 45.8 55 49.5 53" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/><path d="M60 31 C65 41 72.5 40.5 75.5 47.5 C77.3 51.6 74.2 55 70.5 53" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/>
-<path d="M24.5 69 C16.5 67 12.5 73 16.5 78 C19.6 81 24.5 79 24.3 75" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/><path d="M95.5 69 C103.5 67 107.5 73 103.5 78 C100.4 81 95.5 79 95.7 75" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/>
-<path d="M60 126 C54 120.5 44.5 122 42.5 114.5 C41.5 110.6 45.5 107.6 49.5 109.6" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/><path d="M60 126 C66 120.5 75.5 122 77.5 114.5 C78.5 110.6 74.5 107.6 70.5 109.6" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/>
-<g>${HC_PETALS}<circle cx="60" cy="52" r="5.1" fill="#D98BAA"/><circle cx="60" cy="52" r="2.4" fill="#B34A78"/></g>
-<path d="M49 92.5 C49 84.5 55 79.5 62 79.5 C68.6 79.5 72.8 83.4 74 89 C79 88 83 90.2 83 93.6 C83 97.2 79 98.3 74.4 97.6 C74 104 68 108 61 108 C52.6 108 47 102.2 47 95.3 C47 93.6 48 92.9 49 92.5 Z" fill="#A83A66"/>
-<circle cx="64" cy="88" r="2.1" fill="#fff"/><path d="M62 98.5 C66 101.4 70.5 101.2 73.5 98.6" stroke="#F0CFDD" stroke-width="1.5" stroke-linecap="round"/><path d="M56 108 L54.2 113 M63 108.4 L63 114" stroke="#A83A66" stroke-width="2" stroke-linecap="round"/></svg>`;
 
 /* ============================================================
    DATA LAYER — in-memory store persisted to localStorage
@@ -390,7 +381,6 @@ function render(){
   const showCtx=!isParent&&['today','grouping','children','groups','attendance-child','attendance-staff','checkin','checkout','closing'].includes(route);
   $('#app').innerHTML=`
     <header class="appbar">
-      <div class="crest">${LOGO}</div>
       <div class="tt"><div class="ey">Happy Care · Istefada Ilmiyah</div><h1>${esc(scr.title||'Happy Care')}</h1></div>
       <div class="who" style="display:flex;align-items:center;gap:12px">
         <span id="cloud-sync-indicator" style="width:10px;height:10px;border-radius:50%;background:${DB.isCloud?'var(--ok)':'var(--warn)'};display:inline-block;transition:background .3s;flex:none" title="${DB.isCloud?'Connected to Neon DB':'Using local browser offline storage'}"></span>
@@ -442,7 +432,6 @@ function closeModal(){ $('#modal-root').innerHTML=''; }
 let loginMode='staff';
 SCREENS.login=function(){
   return `<div class="login"><div class="login-card">
-    <div class="crest">${LOGO}</div>
     <div class="eyebrow">Istefada Ilmiyah</div>
     <h1>Happy Care</h1>
     <div class="tag">An initiative by Daeratul Aqeeq</div>
