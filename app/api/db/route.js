@@ -6,6 +6,7 @@ const tables = [
   'users',
   'programs',
   'phases',
+  'venues',
   'operatingDates',
   'groups',
   'children',

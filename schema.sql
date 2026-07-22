@@ -45,6 +45,12 @@ CREATE TABLE IF NOT EXISTS "operatingDates" (
   "date" TEXT
 );
 
+CREATE TABLE IF NOT EXISTS "venues" (
+  "id" SERIAL PRIMARY KEY,
+  "phaseId" INTEGER REFERENCES "phases"("id") ON DELETE CASCADE,
+  "name" TEXT
+);
+
 CREATE TABLE IF NOT EXISTS "groups" (
   "id" SERIAL PRIMARY KEY,
   "phaseId" INTEGER,
@@ -55,7 +61,8 @@ CREATE TABLE IF NOT EXISTS "groups" (
   "room" TEXT,
   "status" TEXT,
   "timetableTemplateId" INTEGER,
-  "customTimetable" JSONB
+  "customTimetable" JSONB,
+  "venueId" INTEGER REFERENCES "venues"("id") ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS "children" (

@@ -438,7 +438,10 @@ function todayGroupCard(g,date){
   const gs=groupStaffList(g.id).filter(x=>x.staffId).length;
   const tt=g.timetableTemplateId?DB.byId('timetableTemplates',g.timetableTemplateId):null;
   return `<button class="gcard s-${r.ready?'ok':'warn'}" onclick="go('group',{id:${g.id}})">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><h4>${esc(g.name)}</h4><div class="gm">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${esc(g.room||'No room')}</div></div>${r.ready?'<span class="chip ok">'+svg('check')+'Ready</span>':'<span class="chip warn">'+svg('alert')+'Incomplete</span>'}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><h4>${esc(g.name)}</h4><div class="gm">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${(() => {
+    const v = g.venueId ? DB.byId('venues', g.venueId) : null;
+    return esc(v ? (g.room ? `${v.name} (${g.room})` : v.name) : (g.room || 'No venue'));
+  })()}</div></div>${r.ready?'<span class="chip ok">'+svg('check')+'Ready</span>':'<span class="chip warn">'+svg('alert')+'Incomplete</span>'}</div>
     <div class="gstats">
       <div class="gs"><div class="k">Students</div><div class="v tnum">${kids.length}<small>/${g.capacity}</small></div></div>
       <div class="gs"><div class="k">Present</div><div class="v tnum">${pres}</div></div>
@@ -474,6 +477,30 @@ SCREENS.setup=function(){
     <div class="sec-h"><h3>Phases</h3>${u.role==='admin'?`<button class="btn sm" onclick="editPhase(0)">${svg('plus')} Add phase</button>`:''}</div>
     <div class="stack">${phs.map(p=>phaseCard(p,u)).join('')||emptyState('cal','No phases yet','Add a phase to generate operating dates.','')}</div>
     
+    <div class="sec-h" style="margin-top:28px">
+      <h3>Venues</h3>
+      ${u.role==='admin'?`<button class="btn sm" onclick="openVenueForm(0)">${svg('plus')} Add venue</button>`:''}
+    </div>
+    <div class="card" style="padding:15px">
+      <div class="rows">
+        ${(ph ? DB.filter('venues', v => v.phaseId === ph.id) : []).length ? DB.filter('venues', v => v.phaseId === ph.id).map(v => {
+          const vg = DB.filter('groups', g => g.venueId === v.id);
+          return `
+          <div class="row" style="padding:8px 12px;box-shadow:none;border-color:var(--line-soft)">
+            <div class="av" style="width:34px;height:34px;background:var(--wine-soft);color:var(--wine)">${svg('pin')}</div>
+            <div class="meta">
+              <div class="nm" style="font-size:13.5px;font-weight:600">${esc(v.name)}</div>
+              <div class="sm">${vg.length ? vg.map(g => g.name).join(', ') : 'No groups in this venue'}</div>
+            </div>
+            ${u.role==='admin'?`<div class="end">
+              <button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto" onclick="openVenueForm(${v.id})">${svg('edit')}</button>
+              <button class="xbtn" style="width:30px;height:30px" onclick="deleteVenue(${v.id})">${svg('trash')}</button>
+            </div>`:''}
+          </div>`;
+        }).join('') : '<div class="muted" style="font-size:12.5px;text-align:center;padding:12px">No venues created yet. Click Add venue to begin.</div>'}
+      </div>
+    </div>
+
     <div class="sec-h" style="margin-top:28px"><h3>Staff Members Pool</h3>${u.role==='admin'?`<button class="btn sm" onclick="openStaffForm(0)">${svg('plus')} Add staff</button>`:''}</div>
     <div class="card" style="padding:15px">
       <div class="rows">${staff.length?staff.map(s=>`
@@ -535,6 +562,40 @@ function savePhase(id){
   genDates(sd,ed).forEach(d=>DB.insert('operatingDates',{phaseId:ph.id,date:d}));
   if(!id&&checked('ph-mkgroups')){ for(let i=0;i<rec.groupCount;i++){ DB.insert('groups',{phaseId:ph.id,name:'Group '+(i+1),code:'G'+String(i+1).padStart(2,'0'),ageCategory:'Mixed',capacity:rec.maxPerGroup,room:'',status:'draft',timetableTemplateId:null}); } }
   closeModal(); setPhaseSilent(ph.id); toast('Phase saved · '+genDates(sd,ed).length+' dates generated'); go('setup');
+}
+
+
+function openVenueForm(id){
+  const v = id ? DB.byId('venues', id) : { name: '' };
+  openModal(id ? 'Edit venue' : 'Add venue', `
+    <div class="field"><label>Venue name <span class="req">*</span></label><input class="control" id="vn-name" value="${esc(v.name)}" placeholder="e.g. Main Hall / Annex Building"></div>
+  `, `
+    <button class="btn ghost block" onclick="closeModal()">Cancel</button>
+    <button class="btn block" onclick="saveVenue(${id})">Save</button>
+  `);
+}
+function saveVenue(id){
+  const name = val('vn-name');
+  if(!name){ toast('Enter a venue name','err'); return; }
+  const ph = currentPhase();
+  if(id){
+    DB.update('venues', id, { name });
+  } else {
+    DB.insert('venues', { phaseId: ph.id, name });
+  }
+  closeModal();
+  toast('Venue saved');
+  render();
+}
+
+function deleteVenue(id){
+  if(!confirm('Are you sure you want to delete this venue? Groups in this venue will not be deleted but will have their venue unassigned.')) return;
+  DB.remove('venues', id);
+  DB.filter('groups', g => g.venueId === id).forEach(g => {
+    DB.update('groups', g.id, { venueId: null });
+  });
+  toast('Venue deleted');
+  render();
 }
 
 /* ============================================================
@@ -734,7 +795,10 @@ SCREENS.groups=function(){ const ph=currentPhase(); const gs=phaseGroups(ph.id);
   return {title:'Groups', html:`${subhead('Groups',ph.name)}
     <div class="btnrow" style="margin-bottom:12px"><button class="btn sm" onclick="go('groupedit',{id:0})">${svg('plus')} New group</button></div>
     <div class="grid g2">${gs.map(g=>{ const r=groupReadiness(g); const n=groupChildren(g.id).length; const st=groupStaffList(g.id).filter(x=>x.staffId).length;
-      return `<button class="gcard s-${r.ready?'ok':'warn'}" onclick="go('group',{id:${g.id}})"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h4>${esc(g.name)}</h4><div class="gm">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${esc(g.room||'No room')}</div></div>${r.ready?'<span class="chip ok">'+svg('check')+'Ready</span>':'<span class="chip warn">'+svg('alert')+(r.miss.length)+' left</span>'}</div>
+      return `<button class="gcard s-${r.ready?'ok':'warn'}" onclick="go('group',{id:${g.id}})"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h4>${esc(g.name)}</h4><div class="gm">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${(() => {
+    const v = g.venueId ? DB.byId('venues', g.venueId) : null;
+    return esc(v ? (g.room ? `${v.name} (${g.room})` : v.name) : (g.room || 'No venue'));
+  })()}</div></div>${r.ready?'<span class="chip ok">'+svg('check')+'Ready</span>':'<span class="chip warn">'+svg('alert')+(r.miss.length)+' left</span>'}</div>
       <div class="gstats"><div class="gs"><div class="k">Students</div><div class="v tnum">${n}<small>/${g.capacity}</small></div></div><div class="gs"><div class="k">Staff</div><div class="v tnum">${st}<small>/8</small></div></div></div></button>`;
     }).join('')||emptyState('grid','No groups','Create your first group.','')}</div>`};
 };
@@ -743,7 +807,9 @@ SCREENS.group=function(p){ const g=DB.byId('groups',p.id); if(!g)return{title:'G
   const u=currentUser(); const canEdit=u.role==='admin'||u.role==='supervisor';
   return {title:g.name, html:`${subhead(g.name,g.code+' · '+g.ageCategory,'groups')}
     <div class="banner ${r.ready?'ok':'warn'}"><div class="bi">${svg(r.ready?'check':'alert')}</div><div style="flex:1"><b>Group status: ${r.ready?'Ready':'Incomplete'}</b>${r.miss.length?`<div class="miss">${r.miss.map(m=>`<div class="m">${svg('x')}${esc(m)}</div>`).join('')}</div>`:'<p>All requirements met.</p>'}</div></div>
-    <div class="kvlist" style="margin-top:12px"><div class="c"><div class="k">Room / area</div><div class="v">${esc(g.room||'—')}</div></div><div class="c"><div class="k">Capacity</div><div class="v">${groupChildren(g.id).length} / ${g.capacity}</div></div><div class="c"><div class="k">Age category</div><div class="v">${esc(g.ageCategory)}</div></div><div class="c"><div class="k">Timetable</div><div class="v" style="font-size:13px">${g.timetableTemplateId?esc((DB.byId('timetableTemplates',g.timetableTemplateId)||{}).name||'—'):(g.customTimetable&&g.customTimetable.length?'Custom':'—')}</div></div></div>
+    <div class="kvlist" style="margin-top:12px">
+      <div class="c"><div class="k">Venue</div><div class="v">${esc(g.venueId ? (DB.byId('venues', g.venueId) || {}).name || '—' : '—')}</div></div>
+      <div class="c"><div class="k">Room / area</div><div class="v">${esc(g.room||'—')}</div></div><div class="c"><div class="k">Capacity</div><div class="v">${groupChildren(g.id).length} / ${g.capacity}</div></div><div class="c"><div class="k">Age category</div><div class="v">${esc(g.ageCategory)}</div></div><div class="c"><div class="k">Timetable</div><div class="v" style="font-size:13px">${g.timetableTemplateId?esc((DB.byId('timetableTemplates',g.timetableTemplateId)||{}).name||'—'):(g.customTimetable&&g.customTimetable.length?'Custom':'—')}</div></div></div>
     ${canEdit?`<div class="btnrow" style="margin-top:12px"><button class="btn ghost sm" onclick="go('groupedit',{id:${g.id}})">${svg('edit')} Edit</button><button class="btn ghost sm" onclick="go('groupstaff',{id:${g.id}})">${svg('people')} Staff</button><button class="btn ghost sm" onclick="go('grouping')">${svg('group')} Assign</button><button class="btn ghost sm" onclick="go('attendance-child',{group:${g.id}})">${svg('clip')} Attendance</button></div>`:''}
     <div class="sec-h"><h3>Assigned staff</h3><span class="hint">${staff.filter(x=>x.staffId).length}/8</span></div>
     <div class="card">${STAFF_SLOTS.map(slot=>{ const gsr=staff.find(x=>x.slot===slot); const s=gsr&&DB.byId('staff',gsr.staffId); return `<div class="staffslot"><div style="flex:1"><div class="role">${slot}</div><div class="nm">${s?esc(s.name):'<span class="muted">Not assigned</span>'}</div></div>${s?`<div class="mob">${esc(s.mobile||'')}</div>`:''}</div>`; }).join('')}</div>
@@ -762,15 +828,26 @@ SCREENS.groupedit=function(p){ const ph=currentPhase(); const g=p.id?DB.byId('gr
       <div class="formrow two"><div class="field"><label>Age category</label><select class="control" id="gf-age" onchange="toggleCustomAge()"><option ${g.ageCategory==='3–6'?'selected':''}>3–6</option><option ${g.ageCategory==='7–10'?'selected':''}>7–10</option><option ${g.ageCategory==='Mixed'?'selected':''}>Mixed</option><option value="Custom" ${!preset?'selected':''}>Custom</option></select></div>
         <div class="field"><label>Max capacity</label><input class="control" type="number" id="gf-cap" value="${g.capacity}" min="1"></div></div>
       <div class="formrow two" id="gf-customrow" style="${preset?'display:none':''}"><div class="field"><label>Custom age from</label><input class="control" type="number" id="gf-amin" value="${!preset?(g.ageCategory.split('–')[0]||''):''}"></div><div class="field"><label>to</label><input class="control" type="number" id="gf-amax" value="${!preset?(g.ageCategory.split('–')[1]||''):''}"></div></div>
-      <div class="formrow two"><div class="field"><label>Room / area</label><input class="control" id="gf-room" value="${esc(g.room||'')}"></div>
-        <div class="field"><label>Timetable template</label><select class="control" id="gf-tt"><option value="">— None —</option>${templates.map(t=>`<option value="${t.id}" ${g.timetableTemplateId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div></div>
+      <div class="formrow two">
+        <div class="field"><label>Venue</label>
+          <select class="control" id="gf-venue">
+            <option value="">— None / General —</option>
+            ${(ph ? DB.filter('venues', v => v.phaseId === ph.id) : []).map(v => `<option value="${v.id}" ${g.venueId === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Room / area</label><input class="control" id="gf-room" value="${esc(g.room||'')}"></div>
+      </div>
+      <div class="formrow two">
+        <div class="field"><label>Timetable template</label><select class="control" id="gf-tt"><option value="">— None —</option>${templates.map(t=>`<option value="${t.id}" ${g.timetableTemplateId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+        <div class="field"></div>
+      </div>
       <button class="btn block" onclick="saveGroup(${p.id||0})">${svg('check')} Save group</button>
     </div>`};
 };
 function toggleCustomAge(){ const v=$('#gf-age').value; $('#gf-customrow').style.display=v==='Custom'?'':'none'; }
 function saveGroup(id){ const ph=currentPhase(); const name=val('gf-name'); if(!name){toast('Group name required','err');return;}
   let age=$('#gf-age').value; if(age==='Custom'){ const a=val('gf-amin'),b=val('gf-amax'); age=(a&&b)?`${a}–${b}`:'Mixed'; }
-  const tt=val('gf-tt'); const rec={name,code:val('gf-code')||('G'+String((phaseGroups(ph.id).length+1)).padStart(2,'0')),ageCategory:age,capacity:Number(val('gf-cap'))||35,room:val('gf-room'),timetableTemplateId:tt?Number(tt):null};
+  const tt=val('gf-tt'); const vn=val('gf-venue'); const rec={name,code:val('gf-code')||('G'+String((phaseGroups(ph.id).length+1)).padStart(2,'0')),ageCategory:age,capacity:Number(val('gf-cap'))||35,room:val('gf-room'),timetableTemplateId:tt?Number(tt):null,venueId:vn?Number(vn):null};
   let g; if(id){g=DB.update('groups',id,rec);} else {rec.phaseId=ph.id;rec.status='draft';g=DB.insert('groups',rec);}
   DB.update('groups',g.id,{status:groupReadiness(g).ready?'ready':'draft'}); toast('Group saved'); go('group',{id:g.id}); }
 
