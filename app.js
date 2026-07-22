@@ -266,7 +266,7 @@ SCREENS.login=function(){
   return `<div class="login"><div class="login-card">
     <div class="eyebrow" style="text-align:center;letter-spacing:0.18em;margin-bottom:4px;color:var(--gold);font-weight:700">ISTEFADA ILMIYAH</div>
     <h1 style="font-size:38px;font-weight:700;color:var(--wine);text-align:center;line-height:1;margin-bottom:2px;letter-spacing:-0.02em">Happy Care</h1>
-    <div class="tag" style="text-align:center;font-size:12px;color:var(--ink-soft);margin:2px 0 20px;font-style:italic">An initiative by Daeratul Aqeeq</div>
+    <div style="text-align:center;font-size:12.5px;color:var(--ink-soft);margin:4px 0 20px;font-style:italic">An initiative by Daeratul Aqeeq</div>
     <div class="seg"><button id="lm-staff" class="${loginMode==='staff'?'on':''}" onclick="setLoginMode('staff')">Staff</button><button id="lm-parent" class="${loginMode==='parent'?'on':''}" onclick="setLoginMode('parent')">Parent</button></div>
     <div class="field"><label>${loginMode==='parent'?'Parent ITS ID':'ITS ID'}</label><input class="control" id="li-its" inputmode="numeric" placeholder="e.g. ${loginMode==='parent'?(window.__demoParentITS||'6000001'):'10000001'}" style="transition:transform 0.15s ease"></div>
     <div class="field"><label>Password</label><input class="control" id="li-pw" type="password" placeholder="Enter password" style="transition:transform 0.15s ease"></div>
