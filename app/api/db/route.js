@@ -85,10 +85,10 @@ export async function POST(request) {
 
           // Reset serial sequences
           try {
-            const seqResult = await tx`SELECT pg_get_serial_sequence(${t}, 'id') AS seq`;
-            const seqName = seqResult[0] && seqResult[0].seq;
+            const seqResult = await tx`SELECT c.relname FROM pg_class c WHERE c.relkind = 'S' AND c.relname = ${t + '_id_seq'}`;
+            const seqName = seqResult[0] && seqResult[0].relname;
             if (seqName) {
-              await tx`SELECT setval(${seqName}, COALESCE(MAX("id"), 1)) FROM ${tx(t)}`;
+              await tx`SELECT setval(${'"' + seqName + '"'}, COALESCE(MAX("id"), 1)) FROM ${tx(t)}`;
             }
           } catch (seqError) {
             console.error(`Failed to reset sequence for ${t}:`, seqError);
@@ -122,10 +122,10 @@ export async function POST(request) {
 
       if (sanitized.id) {
         try {
-          const seqResult = await sql`SELECT pg_get_serial_sequence(${table}, 'id') AS seq`;
-          const seqName = seqResult[0] && seqResult[0].seq;
+          const seqResult = await sql`SELECT c.relname FROM pg_class c WHERE c.relkind = 'S' AND c.relname = ${table + '_id_seq'}`;
+          const seqName = seqResult[0] && seqResult[0].relname;
           if (seqName) {
-            await sql`SELECT setval(${seqName}, COALESCE(MAX("id"), 1)) FROM ${sql(table)}`;
+            await sql`SELECT setval(${'"' + seqName + '"'}, COALESCE(MAX("id"), 1)) FROM ${sql(table)}`;
           }
         } catch (seqError) {
           console.error(`Failed to reset sequence for ${table}:`, seqError);
