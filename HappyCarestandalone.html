@@ -370,7 +370,7 @@ function exportCSV(name,header,rows){ downloadFile(name, toCSV([header,...rows])
 const ROLE_LABEL={admin:'Admin',supervisor:'Phase Supervisor',teacher:'Group Teacher',checkin:'Check-in / Pickup',parent:'Parent'};
 const STAFF_NAV=[['today','Today','home'],['setup','Setup','setup'],['grouping','Grouping','group'],['children','Children','child'],['reports','Reports','report']];
 const PARENT_NAV=[['p-children','My Children','child'],['p-timetable','Timetable','cal'],['p-queries','Queries','msg'],['p-account','Profile','user']];
-const NAV_MAP={setup:'setup',phase:'setup',grouping:'grouping',groups:'grouping',group:'grouping',groupedit:'grouping',groupstaff:'grouping',timetables:'grouping',children:'children',child:'children','import-students':'children',reports:'reports','attendance-child':'today','attendance-staff':'today',checkin:'today',checkout:'today',queries:'today',closing:'today',phaseclosing:'today',today:'today',
+const NAV_MAP={setup:'setup',phase:'setup','user-access':'setup',grouping:'grouping',groups:'grouping',group:'grouping',groupedit:'grouping',groupstaff:'grouping',timetables:'grouping',children:'children',child:'children','import-students':'children',reports:'reports','attendance-child':'today','attendance-staff':'today',checkin:'today',checkout:'today',queries:'today',closing:'today',phaseclosing:'today',today:'today',
   'p-children':'p-children','p-profile':'p-children','p-raise':'p-queries','p-timetable':'p-timetable','p-queries':'p-queries','p-account':'p-account'};
 
 /* ---------- app state ---------- */
@@ -624,7 +624,7 @@ function todayGroupCard(g,date){
   const pres=DB.filter('childAttendance',a=>a.groupId===g.id&&a.date===date&&a.present).length;
   const gs=groupStaffList(g.id).filter(x=>x.staffId).length;
   const tt=g.timetableTemplateId?DB.byId('timetableTemplates',g.timetableTemplateId):null;
-  return `<button class="gcard s-${r.ready?'ok':'warn'}" onclick="go('group',{id:${g.id}})">
+  return `<button class="gcard s-${r.ready?'ok':'warn'}" onclick="go('group',{id:${g.id},from:'today'})">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><h4>${esc(g.name)}</h4><div class="gm">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${esc(g.room||'No room')}</div></div>${r.ready?'<span class="chip ok">'+svg('check')+'Ready</span>':'<span class="chip warn">'+svg('alert')+'Incomplete</span>'}</div>
     <div class="gstats">
       <div class="gs"><div class="k">Students</div><div class="v tnum">${kids.length}<small>/${g.capacity}</small></div></div>
@@ -654,7 +654,18 @@ SCREENS.setup=function(){
     ${u.role!=='admin'?'<div class="banner info"><div class="bi">'+svg('shield')+'</div><div><b>View only</b><p>Only Admin can change program setup.</p></div></div>':''}
     <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="eyebrow">Program</div><div class="serif" style="font-size:22px;font-weight:700;color:var(--wine)">${esc(prog?prog.name:'—')}</div><div class="muted" style="font-size:12px">Hijri year ${esc(prog?prog.year:'—')}</div></div>${u.role==='admin'?`<button class="btn ghost sm" onclick="editProgram()">${svg('edit')} Edit</button>`:''}</div></div>
     <div class="sec-h"><h3>Phases</h3>${u.role==='admin'?`<button class="btn sm" onclick="editPhase(0)">${svg('plus')} Add phase</button>`:''}</div>
-    <div class="stack">${phs.map(p=>phaseCard(p,u)).join('')||emptyState('cal','No phases yet','Add a phase to generate operating dates.','')}</div>`};
+    <div class="stack">${phs.map(p=>phaseCard(p,u)).join('')||emptyState('cal','No phases yet','Add a phase to generate operating dates.','')}</div>
+    ${u.role==='admin'?`
+    <div class="sec-h" style="margin-top:28px"><h3>User Logins & Access</h3></div>
+    <div class="card" style="padding:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        <div style="font-weight:800;font-size:15px;color:var(--wine)">Manage System Access</div>
+        <p class="muted" style="font-size:12.5px;margin-top:2px">Configure accounts, passwords, and authorization levels for admins, supervisors, teachers, gate desks, and parents.</p>
+      </div>
+      <button class="btn sm" onclick="go('user-access')">${svg('key')} Manage Access</button>
+    </div>
+    `:''}
+    `};
 };
 function phaseCard(p,u){
   const dates=phaseDates(p.id); const gs=phaseGroups(p.id); const ready=gs.filter(g=>groupReadiness(g).ready).length;
@@ -873,7 +884,7 @@ function refreshGroupingRight(){ const el=$('#grp-right'); if(!el)return; const 
   if(!gs.length){el.innerHTML=emptyState('grid','No groups','Create groups first.',`<button class="btn sm" onclick="go('groupedit',{id:0})">${svg('plus')} New group</button>`);return;}
   el.innerHTML=`<div class="stack">`+gs.map(g=>{ const n=groupChildren(g.id).length; const pct=Math.min(100,n/g.capacity*100); const full=n>=g.capacity;
     return `<div class="card" style="padding:13px">
-      <div style="display:flex;justify-content:space-between;align-items:center"><button onclick="go('group',{id:${g.id}})" style="text-align:left"><div style="font-weight:800;font-size:14.5px">${esc(g.name)}</div><div class="muted" style="font-size:11.5px">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${esc(g.room||'No room')}</div></button>
+      <div style="display:flex;justify-content:space-between;align-items:center"><button onclick="go('group',{id:${g.id},from:'grouping'})" style="text-align:left"><div style="font-weight:800;font-size:14.5px">${esc(g.name)}</div><div class="muted" style="font-size:11.5px">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${esc(g.room||'No room')}</div></button>
         <button class="btn sm ${groupingSel.size?'':'ghost'}" ${groupingSel.size?'':'disabled'} onclick="assignSelectedTo(${g.id})">${svg('plus')} Assign ${groupingSel.size||''}</button></div>
       <div class="progline" style="margin-top:10px"><span>${n}/${g.capacity} assigned</span><span class="muted">${Math.max(0,g.capacity-n)} spaces ${full?'· full':''}</span></div>
       <div class="prog ${full?'u':(pct>85?'w':'g')}"><i style="width:${pct}%"></i></div></div>`;
@@ -894,17 +905,17 @@ function autoSuggest(){ const ph=currentPhase(); const un=phaseChildren(ph.id).f
    GROUPS  (list / details / edit / staff)
    ============================================================ */
 SCREENS.groups=function(){ const ph=currentPhase(); const gs=phaseGroups(ph.id);
-  return {title:'Groups', html:`${subhead('Groups',ph.name)}
+  return {title:'Groups', html:`${subhead('Groups',ph.name,'grouping')}
     <div class="btnrow" style="margin-bottom:12px"><button class="btn sm" onclick="go('groupedit',{id:0})">${svg('plus')} New group</button></div>
     <div class="grid g2">${gs.map(g=>{ const r=groupReadiness(g); const n=groupChildren(g.id).length; const st=groupStaffList(g.id).filter(x=>x.staffId).length;
-      return `<button class="gcard s-${r.ready?'ok':'warn'}" onclick="go('group',{id:${g.id}})"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h4>${esc(g.name)}</h4><div class="gm">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${esc(g.room||'No room')}</div></div>${r.ready?'<span class="chip ok">'+svg('check')+'Ready</span>':'<span class="chip warn">'+svg('alert')+(r.miss.length)+' left</span>'}</div>
+      return `<button class="gcard s-${r.ready?'ok':'warn'}" onclick="go('group',{id:${g.id},from:'groups'})"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h4>${esc(g.name)}</h4><div class="gm">${esc(g.code)} · Age ${esc(g.ageCategory)} · ${esc(g.room||'No room')}</div></div>${r.ready?'<span class="chip ok">'+svg('check')+'Ready</span>':'<span class="chip warn">'+svg('alert')+(r.miss.length)+' left</span>'}</div>
       <div class="gstats"><div class="gs"><div class="k">Students</div><div class="v tnum">${n}<small>/${g.capacity}</small></div></div><div class="gs"><div class="k">Staff</div><div class="v tnum">${st}<small>/8</small></div></div></div></button>`;
     }).join('')||emptyState('grid','No groups','Create your first group.','')}</div>`};
 };
 SCREENS.group=function(p){ const g=DB.byId('groups',p.id); if(!g)return{title:'Group',html:emptyState('grid','Group not found','','')};
   const r=groupReadiness(g); const kids=groupChildren(g.id).sort((a,b)=>a.name.localeCompare(b.name)); const staff=groupStaffList(g.id); const tt=groupTimetable(g);
   const u=currentUser(); const canEdit=u.role==='admin'||u.role==='supervisor';
-  return {title:g.name, html:`${subhead(g.name,g.code+' · '+g.ageCategory,'groups')}
+  return {title:g.name, html:`${subhead(g.name,g.code+' · '+g.ageCategory,p.from||'groups')}
     <div class="banner ${r.ready?'ok':'warn'}"><div class="bi">${svg(r.ready?'check':'alert')}</div><div style="flex:1"><b>Group status: ${r.ready?'Ready':'Incomplete'}</b>${r.miss.length?`<div class="miss">${r.miss.map(m=>`<div class="m">${svg('x')}${esc(m)}</div>`).join('')}</div>`:'<p>All requirements met.</p>'}</div></div>
     <div class="kvlist" style="margin-top:12px"><div class="c"><div class="k">Room / area</div><div class="v">${esc(g.room||'—')}</div></div><div class="c"><div class="k">Capacity</div><div class="v">${groupChildren(g.id).length} / ${g.capacity}</div></div><div class="c"><div class="k">Age category</div><div class="v">${esc(g.ageCategory)}</div></div><div class="c"><div class="k">Timetable</div><div class="v" style="font-size:13px">${g.timetableTemplateId?esc((DB.byId('timetableTemplates',g.timetableTemplateId)||{}).name||'—'):(g.customTimetable&&g.customTimetable.length?'Custom':'—')}</div></div></div>
     ${canEdit?`<div class="btnrow" style="margin-top:12px"><button class="btn ghost sm" onclick="go('groupedit',{id:${g.id}})">${svg('edit')} Edit</button><button class="btn ghost sm" onclick="go('groupstaff',{id:${g.id}})">${svg('people')} Staff</button><button class="btn ghost sm" onclick="go('grouping')">${svg('group')} Assign</button><button class="btn ghost sm" onclick="go('attendance-child',{group:${g.id}})">${svg('clip')} Attendance</button></div>`:''}
@@ -967,11 +978,239 @@ function saveStaff(id){ const name=val('sf-name'); if(!name){toast('Name require
   if(id)DB.update('staff',id,rec); else DB.insert('staff',rec); closeModal(); toast('Staff saved'); render(); }
 
 /* ============================================================
+   USER ACCESS & ROLES
+   ============================================================ */
+let userSearch = '', userRoleFilter = 'all';
+SCREENS['user-access'] = function() {
+  if (currentUser().role !== 'admin') {
+    return {title: 'Access Denied', html: emptyState('lock', 'Access Denied', 'Only Program Admins can manage user access.', '')};
+  }
+  return {
+    title: 'User Access & Roles',
+    html: `
+      ${subhead('User Access & Roles', 'Manage system users, login accounts and access levels', 'setup')}
+      <div class="btnrow" style="margin-bottom:12px">
+        <button class="btn sm" onclick="openUserAccountForm(0)">${svg('plus')} Add User Login</button>
+        <button class="btn ghost sm" onclick="openRoleDefinitions()">${svg('shield')} View Role Definitions</button>
+      </div>
+      <div class="search" style="margin-bottom:10px">${svg('search')}<input id="usr-search" placeholder="Search by name or ITS ID" value="${esc(userSearch)}" oninput="userSearch=this.value;refreshUserList()"></div>
+      <div class="filters" style="margin-bottom:12px" id="usr-filters">
+        ${['all', 'admin', 'supervisor', 'teacher', 'checkin', 'parent'].map(f => `<button class="fchip ${userRoleFilter === f ? 'on' : ''}" onclick="userRoleFilter='${f}';syncUserFilters();refreshUserList()">${f === 'all' ? 'All Roles' : ROLE_LABEL[f] || (f === 'checkin' ? 'Check-in Desk' : f)}</button>`).join('')}
+      </div>
+      <div id="usr-list"></div>
+    `,
+    after: refreshUserList
+  };
+};
+
+function syncUserFilters() {
+  document.querySelectorAll('#usr-filters .fchip').forEach((b, i) => b.classList.toggle('on', ['all', 'admin', 'supervisor', 'teacher', 'checkin', 'parent'][i] === userRoleFilter));
+}
+
+function refreshUserList() {
+  const el = $('#usr-list');
+  if (!el) return;
+  const q = userSearch.toLowerCase().trim();
+  let list = DB.all('users');
+  
+  if (userRoleFilter !== 'all') {
+    list = list.filter(u => u.role === userRoleFilter);
+  }
+  if (q) {
+    list = list.filter(u => (u.name || '').toLowerCase().includes(q) || (u.itsId || '').includes(q));
+  }
+  
+  list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  
+  if (!list.length) {
+    el.innerHTML = emptyState('people', 'No users found', 'Adjust filters or add a new user login.', '');
+    return;
+  }
+  
+  el.innerHTML = `<div class="muted" style="font-size:12px;margin-bottom:8px">${list.length} user logins</div><div class="rows">` + list.map(u => {
+    const active = u.active !== false;
+    let desc = ROLE_LABEL[u.role] || u.role;
+    if (u.staffId) {
+      const s = DB.byId('staff', u.staffId);
+      if (s) desc += ` · Linked to Staff: ${s.name}`;
+    } else if (u.parentId) {
+      const p = DB.byId('parents', u.parentId);
+      if (p) desc += ` · Linked to Parent: ${p.name}`;
+    }
+    
+    return `<div class="row">
+      <div class="av" style="background:${u.role==='admin'?'var(--wine-100)':(u.role==='parent'?'var(--gold-100)':'var(--blue-100)')};color:${u.role==='admin'?'var(--wine)':(u.role==='parent'?'var(--gold)':'var(--blue)')}">
+        ${svg(u.role === 'admin' ? 'shield' : (u.role === 'parent' ? 'user' : (u.role === 'checkin' ? 'door' : 'people')))}
+      </div>
+      <div class="meta">
+        <div class="nm">${esc(u.name || 'Unnamed')} ${u.needsPasswordChange ? '<span class="tag" style="color:var(--warn);border-color:var(--warn-line)">Reset Pending</span>' : ''}</div>
+        <div class="sm"><span class="mono">ITS ${esc(u.itsId)}</span> · ${desc}</div>
+      </div>
+      <div class="end">
+        <span class="chip ${active ? 'ok' : 'idle'}">${active ? 'Active' : 'Disabled'}</span>
+        <button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto;color:var(--warn)" title="Reset password to default (happycare123)" onclick="adminResetDirectUserPassword(${u.id})">${svg('key')}</button>
+        <button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto" onclick="openUserAccountForm(${u.id})">${svg('edit')}</button>
+        ${currentUser().id !== u.id ? `<button class="xbtn" style="width:30px;height:30px" onclick="deleteUserAccount(${u.id})">${svg('trash')}</button>` : ''}
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function adminResetDirectUserPassword(userId) {
+  const u = DB.byId('users', userId);
+  if (!u) return;
+  if (!confirm(`Reset password for ${u.name} back to the default "happycare123"?`)) return;
+  const salt = rndSalt();
+  DB.update('users', u.id, {
+    salt: salt,
+    hash: hashPw('happycare123', salt),
+    needsPasswordChange: true
+  });
+  toast(`Password reset for ${u.name}`);
+  refreshUserList();
+}
+
+function deleteUserAccount(userId) {
+  const u = DB.byId('users', userId);
+  if (!u) return;
+  if (currentUser().id === u.id) {
+    toast('Cannot delete your own admin account', 'err');
+    return;
+  }
+  if (!confirm(`Are you sure you want to delete the user login account for ${u.name}? They will lose access immediately.`)) return;
+  DB.remove('users', u.id);
+  toast(`User account deleted`);
+  refreshUserList();
+}
+
+function openRoleDefinitions() {
+  openModal('Role Definitions', `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="padding:12px;box-shadow:none;border-color:var(--line-soft)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="chip wine" style="font-size:11px">Admin</span></div>
+        <p style="font-size:12.5px;color:var(--ink-soft)">Full system access. Configures programs, phases, venues, groups, assigns children and staff, designs timetables, manages queries, closing tasks, database backups, and user logins.</p>
+      </div>
+      <div class="card" style="padding:12px;box-shadow:none;border-color:var(--line-soft)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="chip warn" style="font-size:11px">Phase Supervisor</span></div>
+        <p style="font-size:12.5px;color:var(--ink-soft)">Phase-wide supervisor level. Monitors daily attendance stats, manages child & staff attendance for all groups, coordinates and resolves parent queries, views reports, and manages daily/phase closing checklists.</p>
+      </div>
+      <div class="card" style="padding:12px;box-shadow:none;border-color:var(--line-soft)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="chip info" style="font-size:11px">Group Teacher</span></div>
+        <p style="font-size:12.5px;color:var(--ink-soft)">Assigned to a specific classroom group. View their own group's children roster, take daily attendance, and directly read and reply to parent communication queries for their children.</p>
+      </div>
+      <div class="card" style="padding:12px;box-shadow:none;border-color:var(--line-soft)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="chip idle" style="font-size:11px">Check-in / Pickup Desk</span></div>
+        <p style="font-size:12.5px;color:var(--ink-soft)">Gate/Desk staff interface. Optimized search panel to quickly look up children by name, student ITS, parent ITS, or mobile, and record checked-in and checked-out timestamps safely.</p>
+      </div>
+      <div class="card" style="padding:12px;box-shadow:none;border-color:var(--line-soft)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="chip ok" style="font-size:11px">Parent</span></div>
+        <p style="font-size:12.5px;color:var(--ink-soft)">Limited personal portal. Shows their own linked children, their assigned groups/classrooms, daily group timetables, historical attendance records, and lets them open query tickets to contact the care team.</p>
+      </div>
+    </div>
+  `, `<button class="btn block" onclick="closeModal()">Close</button>`);
+}
+
+function openUserAccountForm(id) {
+  const u = id ? DB.byId('users', id) : { itsId: '', name: '', role: 'teacher', active: true, staffId: null, parentId: null };
+  const staff = DB.all('staff').sort((a,b) => a.name.localeCompare(b.name));
+  const parents = DB.all('parents').sort((a,b) => a.name.localeCompare(b.name));
+  
+  openModal(id ? 'Edit User Login' : 'Add User Login', `
+    <div class="field"><label>ITS ID <span class="req">*</span></label><input class="control" id="uf-its" inputmode="numeric" value="${esc(u.itsId)}" placeholder="e.g. 10000003" ${id?'disabled':''}></div>
+    <div class="field"><label>Full Name <span class="req">*</span></label><input class="control" id="uf-name" value="${esc(u.name)}" placeholder="e.g. Yusuf Contractor"></div>
+    <div class="field"><label>Access Role <span class="req">*</span></label>
+      <select class="control" id="uf-role" onchange="onUserRoleChange()">
+        <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+        <option value="supervisor" ${u.role==='supervisor'?'selected':''}>Phase Supervisor</option>
+        <option value="teacher" ${u.role==='teacher'?'selected':''}>Group Teacher</option>
+        <option value="checkin" ${u.role==='checkin'?'selected':''}>Check-in / Pickup Desk</option>
+        <option value="parent" ${u.role==='parent'?'selected':''}>Parent</option>
+      </select>
+    </div>
+    
+    <div class="field" id="uf-link-staff-row" style="display:${(u.role==='teacher'||u.role==='supervisor')?'':'none'}">
+      <label>Link to Staff Member</label>
+      <select class="control" id="uf-staffId">
+        <option value="">— Standalone Login Account —</option>
+        ${staff.map(s => `<option value="${s.id}" ${u.staffId===s.id?'selected':''}>${esc(s.name)} (ITS: ${esc(s.itsId)})</option>`).join('')}
+      </select>
+    </div>
+    
+    <div class="field" id="uf-link-parent-row" style="display:${u.role==='parent'?'':'none'}">
+      <label>Link to Parent Profile</label>
+      <select class="control" id="uf-parentId">
+        <option value="">— Standalone Login Account —</option>
+        ${parents.map(p => `<option value="${p.id}" ${u.parentId===p.id?'selected':''}>${esc(p.name)} (ITS: ${esc(p.itsId)})</option>`).join('')}
+      </select>
+    </div>
+    
+    <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">
+      <input type="checkbox" id="uf-active" ${u.active!==false?'checked':''}> Account Enabled
+    </label>
+    ${!id ? '<p class="hint" style="margin-top:8px">New accounts default to password <b>happycare123</b> and require a password change on first sign-in.</p>' : ''}
+  `, `
+    <button class="btn ghost block" onclick="closeModal()">Cancel</button>
+    <button class="btn block" onclick="saveUserAccount(${id||0})">Save Account</button>
+  `);
+}
+
+function onUserRoleChange() {
+  const role = $('#uf-role').value;
+  $('#uf-link-staff-row').style.display = (role === 'teacher' || role === 'supervisor') ? '' : 'none';
+  $('#uf-link-parent-row').style.display = (role === 'parent') ? '' : 'none';
+}
+
+function saveUserAccount(id) {
+  const itsId = val('uf-its').trim();
+  const name = val('uf-name');
+  const role = $('#uf-role').value;
+  const active = checked('uf-active');
+  
+  if (!itsId || !name) {
+    toast('ITS ID and Name are required', 'err');
+    return;
+  }
+  
+  if (!id && DB.find('users', u => u.itsId === itsId)) {
+    toast('A user with this ITS ID already exists', 'err');
+    return;
+  }
+  
+  const staffSelect = $('#uf-staffId');
+  const parentSelect = $('#uf-parentId');
+  const staffId = (role === 'teacher' || role === 'supervisor') && staffSelect && staffSelect.value ? Number(staffSelect.value) : null;
+  const parentId = (role === 'parent') && parentSelect && parentSelect.value ? Number(parentSelect.value) : null;
+  
+  const rec = { name, role, active, staffId, parentId };
+  
+  if (id) {
+    DB.update('users', id, rec);
+    toast('User account updated');
+  } else {
+    const salt = rndSalt();
+    DB.insert('users', Object.assign({
+      itsId,
+      salt,
+      hash: hashPw('happycare123', salt),
+      needsPasswordChange: true
+    }, rec));
+    toast('User account created successfully');
+  }
+  
+  closeModal();
+  if (state.route === 'user-access') {
+    refreshUserList();
+  } else {
+    render();
+  }
+}
+
+/* ============================================================
    TIMETABLES
    ============================================================ */
 let ttDraft=[];
 SCREENS.timetables=function(){ const tpl=DB.all('timetableTemplates'); const ph=currentPhase();
-  return {title:'Timetables', html:`${subhead('Timetable templates','Reusable daily schedules')}
+  return {title:'Timetables', html:`${subhead('Timetable templates','Reusable daily schedules','grouping')}
     <div class="btnrow" style="margin-bottom:12px"><button class="btn sm" onclick="openTemplate(0)">${svg('plus')} New template</button></div>
     <div class="stack">${tpl.map(t=>{ const used=phaseGroups(ph?ph.id:0).filter(g=>g.timetableTemplateId===t.id).length;
       return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-weight:800;font-size:15px">${esc(t.name)}</div><div class="muted" style="font-size:12px">Age ${esc(t.ageCategory)} · ${t.items.length} activities · used by ${used} group${used!==1?'s':''}</div></div><div class="btnrow"><button class="btn ghost sm" onclick="openTemplate(${t.id})">${svg('edit')}</button><button class="btn ghost sm" onclick="assignTemplate(${t.id})">Assign</button></div></div>
@@ -1010,7 +1249,7 @@ SCREENS['attendance-child']=function(p){ const ph=currentPhase(); const date=sta
   if(p&&p.group)attGroup=p.group; if(!attGroup&&gs[0])attGroup=gs[0].id;
   const g=DB.byId('groups',attGroup);
   const kids=g?groupChildren(g.id).sort((a,b)=>a.name.localeCompare(b.name)):[];
-  return {title:'Child Attendance', html:`${subhead('Child attendance',fmtDate(date))}
+  return {title:'Child Attendance', html:`${subhead('Child attendance',fmtDate(date),p&&p.group?'group':'today',p&&p.group?{id:p.group}:{})}
     ${u.role!=='teacher'?`<div class="field"><label>Group</label><select class="control" onchange="attGroup=Number(this.value);render()">${gs.map(x=>`<option value="${x.id}" ${x.id===attGroup?'selected':''}>${esc(x.name)} (${groupChildren(x.id).length})</option>`).join('')}</select></div>`:''}
     <div class="btnrow" style="margin:6px 0 12px"><button class="btn ghost sm" onclick="markAllPresent(${attGroup})">${svg('check')} Mark all present</button><button class="btn ghost sm" onclick="exportAttendanceDay()">${svg('download')} Export day</button></div>
     <div class="rows">${kids.length?kids.map(c=>{ const a=attRec(c.id,date); const pres=a&&a.present;
@@ -1030,7 +1269,7 @@ function exportAttendanceDay(){ const date=state.dateISO; const g=DB.byId('group
    ============================================================ */
 SCREENS['attendance-staff']=function(){ const ph=currentPhase(); const date=state.dateISO; const gs=phaseGroups(ph.id);
   const assigns=DB.filter('groupStaff',x=>x.staffId&&gs.some(g=>g.id===x.groupId));
-  return {title:'Staff Attendance', html:`${subhead('Staff attendance',fmtDate(date))}
+  return {title:'Staff Attendance', html:`${subhead('Staff attendance',fmtDate(date),'today')}
     <div class="rows">${assigns.length?assigns.map(a=>{ const s=DB.byId('staff',a.staffId); const g=DB.byId('groups',a.groupId); const rec=DB.find('staffAttendance',r=>r.staffId===a.staffId&&r.date===date&&r.groupId===a.groupId); const st=rec?rec.status:'';
       return `<div class="row"><div class="av">${initials(s.name)}</div><div class="meta"><div class="nm">${esc(s.name)}</div><div class="sm">${esc(a.slot)} · ${esc(g.name)}</div></div>
         <div class="end">${['present','absent','replacement'].map(x=>`<button class="fchip ${st===x?'on':''}" style="padding:5px 9px" onclick="setStaffAtt(${a.staffId},${a.groupId},'${a.slot.replace(/'/g,'')}','${x}')">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div></div>`;
@@ -1046,11 +1285,11 @@ function searchPeople(q){ q=q.toLowerCase().trim(); if(!q)return[]; const ph=cur
   DB.all('parents').filter(p=>p.itsId.includes(q)||(p.mobile||'').includes(q)||p.name.toLowerCase().includes(q)).forEach(p=>{ parentChildren(p.id).forEach(c=>{ if(c.phaseId===ph.id)set.set(c.id,c); }); });
   return [...set.values()]; }
 let ciQuery='';
-SCREENS.checkin=function(){ return {title:'Child Check-in', html:`${subhead('Child check-in',fmtDate(state.dateISO))}
+SCREENS.checkin=function(){ return {title:'Child Check-in', html:`${subhead('Child check-in',fmtDate(state.dateISO),'today')}
   <div class="search" style="margin-bottom:12px">${svg('search')}<input id="ci-q" placeholder="Student ITS, child name, Parent ITS or mobile" value="${esc(ciQuery)}" oninput="ciQuery=this.value;refreshCheckin('in')"></div>
   <div id="ci-res"></div>`, after:()=>refreshCheckin('in')};
 };
-SCREENS.checkout=function(){ return {title:'Child Check-out', html:`${subhead('Child check-out',fmtDate(state.dateISO))}
+SCREENS.checkout=function(){ return {title:'Child Check-out', html:`${subhead('Child check-out',fmtDate(state.dateISO),'today')}
   <div class="search" style="margin-bottom:12px">${svg('search')}<input id="ci-q" placeholder="Student ITS, child name, Parent ITS or mobile" value="${esc(ciQuery)}" oninput="ciQuery=this.value;refreshCheckin('out')"></div>
   <div id="ci-res"></div>`, after:()=>refreshCheckin('out')};
 };
@@ -1098,7 +1337,7 @@ SCREENS.queries=function(){ const ph=currentPhase();
   let list=DB.filter('queries',q=>q.phaseId===ph.id);
   if(qFilter==='open')list=list.filter(q=>q.status!=='Closed'); else if(qFilter!=='all')list=list.filter(q=>q.status===qFilter);
   list.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
-  return {title:'Parent Queries', html:`${subhead('Parent queries',ph.name)}
+  return {title:'Parent Queries', html:`${subhead('Parent queries',ph.name,'today')}
     <div class="filters" style="margin-bottom:12px">${['open','Submitted','In Review','Responded','Closed','all'].map(f=>`<button class="fchip ${qFilter===f?'on':''}" onclick="qFilter='${f}';render()">${f==='open'?'Open':f==='all'?'All':f}</button>`).join('')}</div>
     <div class="rows">${list.length?list.map(q=>queryRow(q,true)).join(''):emptyState('msg','No queries','Parent queries will appear here.','')}</div>`};
 };
@@ -1153,7 +1392,7 @@ SCREENS.closing=function(){ const ph=currentPhase(); const date=state.dateISO; c
   const openIssues=DB.filter('issues',i=>i.phaseId===ph.id&&i.status!=='closed');
   const checks=[['All present children checked out',inside.length===0,`${inside.length} still inside`],['Attendance recorded',att.length>0,`${att.length} present marked`],['Issues reviewed',openIssues.length===0,`${openIssues.length} open`]];
   const canClose=checks.every(c=>c[1]); const closed=(ph.closedDates||[]).includes(date);
-  return {title:'Daily Closing', html:`${subhead('Daily closing',fmtDate(date))}
+  return {title:'Daily Closing', html:`${subhead('Daily closing',fmtDate(date),'today')}
     ${closed?'<div class="banner ok"><div class="bi">'+svg('check')+'</div><div><b>This day is closed</b></div></div>':`<div class="banner ${canClose?'ok':'warn'}"><div class="bi">${svg('shield')}</div><div><b>${canClose?'Ready to close the day':'Not ready to close'}</b><p>${checks.filter(c=>!c[1]).length} checks remaining</p></div></div>`}
     <div class="stack" style="margin-top:12px">${checks.map(c=>`<div class="card" style="display:flex;align-items:center;gap:11px;padding:12px 14px"><div class="ck ${c[1]?'ok on':''}">${svg(c[1]?'check':'clock')}</div><div style="flex:1"><b style="font-size:13.5px">${c[0]}</b><div class="muted" style="font-size:12px">${c[2]}</div></div>${c[1]?'<span class="chip ok">Clear</span>':'<span class="chip warn">Pending</span>'}</div>`).join('')}</div>
     ${inside.length?`<div class="sec-h"><h3>Still inside</h3></div><div class="rows">${inside.map(a=>{const c=DB.byId('children',a.childId);const g=DB.byId('groups',a.groupId);return `<div class="row"><div class="av">${initials(c.name)}</div><div class="meta"><div class="nm">${esc(c.name)}</div><div class="sm">${g?esc(g.name):''} · in ${to12(a.checkIn)}</div></div><div class="end"><button class="btn sm" onclick="doCheckOut(${c.id})">Check out</button></div></div>`;}).join('')}</div>`:''}
@@ -1167,7 +1406,7 @@ SCREENS.phaseclosing=function(){ const ph=currentPhase(); const gs=phaseGroups(p
   const checks=[['Every day closed',daysClosed>=dates.length,`${daysClosed}/${dates.length} days`],['No child still inside',inside===0,`${inside} inside`],['No open parent queries',openQ===0,`${openQ} open`],['All groups complete',notReady===0,`${notReady} incomplete`]];
   const canClose=checks.every(c=>c[1]);
   const summary=[['Registered children',kids.length],['Assigned',kids.filter(c=>childGroupId(c.id,ph.id)).length],['Groups',gs.length],['Groups ready',gs.filter(g=>groupReadiness(g).ready).length],['Operating days',dates.length],['Days closed',daysClosed],['Queries',DB.filter('queries',q=>q.phaseId===ph.id).length]];
-  return {title:'Phase Closing', html:`${subhead('Phase closing',ph.name)}
+  return {title:'Phase Closing', html:`${subhead('Phase closing',ph.name,'today')}
     <div class="banner ${canClose?'ok':'warn'}"><div class="bi">${svg('shield')}</div><div><b>${ph.closed?'Phase closed':canClose?'Ready to close phase':'Phase cannot close yet'}</b><p>${checks.filter(c=>!c[1]).length} checks remaining</p></div></div>
     <div class="stack" style="margin-top:12px">${checks.map(c=>`<div class="card" style="display:flex;align-items:center;gap:11px;padding:12px 14px"><div class="ck ${c[1]?'ok on':''}">${svg(c[1]?'check':'clock')}</div><div style="flex:1"><b style="font-size:13.5px">${c[0]}</b><div class="muted" style="font-size:12px">${c[2]}</div></div>${c[1]?'<span class="chip ok">Clear</span>':'<span class="chip warn">Pending</span>'}</div>`).join('')}</div>
     <div class="sec-h"><h3>Phase summary</h3></div>
