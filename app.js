@@ -30,6 +30,26 @@ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8 2 2-2 2 2 2-3 3-2-2"/>',p
 };
 function svg(n,cls){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${cls?`class="${cls}"`:''}>${I[n]||''}</svg>`}
 const HC_PETALS=Array.from({length:8},(_,k)=>`<ellipse cx="60" cy="44.5" rx="3.1" ry="6" fill="#E7A6BF" transform="rotate(${k*45} 60 52)"/>`).join('');
+const LOGO=`<svg viewBox="0 0 120 138" fill="none" aria-label="Happy Care">
+<circle cx="60" cy="5" r="1.9" fill="#1C4D37"/><path d="M60 8 C61.6 11 64 12.4 64 15.2 C64 17.8 62.1 19.4 60 19.4 C57.9 19.4 56 17.8 56 15.2 C56 12.4 58.4 11 60 8 Z" fill="#1C4D37"/>
+<path d="M60 18 C46 31 26 45 24 70 C22.4 92 40 112 60 126 C80 112 97.6 92 96 70 C94 45 74 31 60 18 Z" stroke="#1C4D37" stroke-width="3.1" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M60 31 C55 41 47.5 40.5 44.5 47.5 C42.7 51.6 45.8 55 49.5 53" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/><path d="M60 31 C65 41 72.5 40.5 75.5 47.5 C77.3 51.6 74.2 55 70.5 53" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M24.5 69 C16.5 67 12.5 73 16.5 78 C19.6 81 24.5 79 24.3 75" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/><path d="M95.5 69 C103.5 67 107.5 73 103.5 78 C100.4 81 95.5 79 95.7 75" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M60 126 C54 120.5 44.5 122 42.5 114.5 C41.5 110.6 45.5 107.6 49.5 109.6" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/><path d="M60 126 C66 120.5 75.5 122 77.5 114.5 C78.5 110.6 74.5 107.6 70.5 109.6" stroke="#1C4D37" stroke-width="2.5" stroke-linecap="round"/>
+<g fill="#9A2749">
+  <circle cx="60" cy="46" r="2.2"/>
+  <path d="M60,39.5 L61.2,43.5 L58.8,43.5 Z"/>
+  <path d="M60,52.5 L61.2,48.5 L58.8,48.5 Z"/>
+  <path d="M53.5,46 L57.5,47.2 L57.5,44.8 Z"/>
+  <path d="M66.5,46 L62.5,47.2 L62.5,44.8 Z"/>
+  <path d="M55.4,41.4 L58.4,44.4 L56.7,45.4 Z"/>
+  <path d="M64.6,50.6 L61.6,47.6 L63.3,46.6 Z"/>
+  <path d="M55.4,50.6 L58.4,47.6 L56.7,46.6 Z"/>
+  <path d="M64.6,41.4 L61.6,44.4 L63.3,45.4 Z"/>
+</g>
+<path d="M50,75 C47,75 45,76 45,76 L49,78 C48.5,81 50.5,84 55,85 C60,86 65,83 69,79 C73,75 76,75 76,75 C74,76.5 72.5,79 70.5,81 C68,83.5 65,84 62,84 C59,84 56.5,82.5 55,80 C53.5,77.5 52,75.5 50,75 Z" stroke="#9A2749" stroke-width="2.2" fill="#fff" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M57,77 C59,80 63,80 64,77 C62,75 58,75 57,77 Z" stroke="#9A2749" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+<circle cx="52.5" cy="76" r="1.1" fill="#9A2749"/></svg>`;
 
 /* ============================================================
    DATA LAYER — in-memory store persisted to localStorage
@@ -155,6 +175,7 @@ function render(){
   const showCtx=!isParent&&['today','grouping','children','groups','attendance-child','attendance-staff','checkin','checkout','closing'].includes(route);
   $('#app').innerHTML=`
     <header class="appbar">
+      <div class="crest">${LOGO}</div>
       <div class="tt"><div class="ey">Happy Care · Istefada Ilmiyah</div><h1>${esc(scr.title||'Happy Care')}</h1></div>
       <div class="who"><button class="iconbtn" onclick="openMenu()" title="Menu">${svg('list')}</button>
         <button class="av" onclick="go(isParent?'p-account':'staff-profile')">${initials(u.name)}</button></div>
@@ -205,6 +226,7 @@ function closeModal(){ $('#modal-root').innerHTML=''; }
 let loginMode='staff';
 SCREENS.login=function(){
   return `<div class="login"><div class="login-card">
+    <div class="crest">${LOGO}</div>
     <div class="eyebrow" style="text-align:center;letter-spacing:0.18em;margin-bottom:4px;color:var(--gold);font-weight:700">ISTEFADA ILMIYAH</div>
     <h1 style="font-size:38px;font-weight:700;color:var(--wine);text-align:center;line-height:1;margin-bottom:2px;letter-spacing:-0.02em">Happy Care</h1>
     <div style="text-align:center;font-size:12.5px;color:var(--ink-soft);margin:4px 0 20px;font-style:italic">An initiative by Daeratul Aqeeq</div>
