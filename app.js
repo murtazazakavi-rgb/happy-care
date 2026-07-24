@@ -1568,10 +1568,51 @@ function submitQuery(){ const cid=Number($('#rq-child').value); if(!ownsChild(ci
 SCREENS['p-account']=function(){ const p=parentSelf(); const u=currentUser(); const kids=myChildren();
   return {title:'Profile', html:`${subhead('My profile','')}
     <div class="card"><div class="row" style="border:none;box-shadow:none;padding:0"><div class="av" style="width:52px;height:52px;background:var(--gold-100);color:var(--gold)">${initials(u.name)}</div><div class="meta"><div class="nm" style="font-size:16px">${esc(u.name)}</div><div class="sm">Parent · <span class="mono">ITS ${esc(u.itsId)}</span></div></div></div>
-      <div class="kvlist" style="margin-top:11px"><div class="c"><div class="k">Mobile</div><div class="v" style="font-size:13px">${esc(p?p.mobile||'—':'—')}</div></div><div class="c"><div class="k">Pickup</div><div class="v" style="font-size:13px">${p&&p.authorisedPickup?'Authorised':'Not set'}</div></div></div></div>
+      <div class="kvlist" style="margin-top:11px"><div class="c"><div class="k">Mobile</div><div class="v" style="font-size:13px">${esc(p?p.mobile||'—':'—')}</div></div><div class="c"><div class="k">Alt Mobile</div><div class="v" style="font-size:13px">${esc(p?p.altMobile||'—':'—')}</div></div><div class="c"><div class="k">Email</div><div class="v" style="font-size:13px">${esc(p?p.email||'—':'—')}</div></div><div class="c"><div class="k">Pickup</div><div class="v" style="font-size:13px">${p&&p.authorisedPickup?'Authorised':'Not set'}</div></div></div>
+      <div class="btnrow" style="margin-top:12px"><button class="btn sm ghost block" onclick="editParentProfile()">${svg('edit')} Edit Profile Details</button></div></div>
     <div class="sec-h"><h3>Linked children</h3></div>
     <div class="rows">${kids.map(c=>`<button class="row" onclick="go('p-profile',{id:${c.id}})"><div class="av">${initials(c.name)}</div><div class="meta"><div class="nm">${esc(c.name)}</div><div class="sm"><span class="mono">ITS ${esc(c.itsId)}</span></div></div><div class="end">${svg('chev')}</div></button>`).join('')}</div>
     <button class="btn dark block lg" style="margin-top:16px" onclick="logout()">${svg('logout')} Sign out</button>`};
+};
+
+function editParentProfile() {
+  const p = parentSelf() || {};
+  const u = currentUser();
+  openModal('Edit Profile', `
+    <div class="field"><label>Full Name <span class="req">*</span></label><input class="control" id="pe-name" value="${esc(p.name || u.name || '')}"></div>
+    <div class="formrow two">
+      <div class="field"><label>Mobile <span class="req">*</span></label><input class="control" id="pe-mob" value="${esc(p.mobile || '')}"></div>
+      <div class="field"><label>Alternate Mobile</label><input class="control" id="pe-alt" value="${esc(p.altMobile || '')}"></div>
+    </div>
+    <div class="field"><label>Email Address</label><input class="control" type="email" id="pe-email" value="${esc(p.email || '')}"></div>
+  `, `
+    <button class="btn ghost block" onclick="closeModal()">Cancel</button>
+    <button class="btn block" onclick="saveParentProfile()">Save Profile</button>
+  `);
+}
+
+async function saveParentProfile() {
+  const name = val('pe-name');
+  const mobile = val('pe-mob');
+  const altMobile = val('pe-alt');
+  const email = val('pe-email');
+  if (!name || !mobile) {
+    toast('Name and Mobile number are required', 'err');
+    return;
+  }
+  const u = currentUser();
+  let p = parentSelf();
+  if (p) {
+    await DB.update('parents', p.id, { name, mobile, altMobile, email });
+  } else {
+    p = await DB.insert('parents', { itsId: u.itsId, name, mobile, altMobile, email, authorisedPickup: false });
+    await DB.update('users', u.id, { parentId: p.id });
+  }
+  await DB.update('users', u.id, { name });
+  closeModal();
+  toast('Profile updated successfully');
+  render();
+}
 };
 
 
