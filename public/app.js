@@ -690,7 +690,7 @@ function emptyState(icon,title,text,action){ return `<div class="empty"><div cla
 function val(id){const e=$('#'+id);return e?String(e.value).trim():'';}
 function rawval(id){const e=$('#'+id);return e?e.value:'';}
 function checked(id){const e=$('#'+id);return e?e.checked:false;}
-function subhead(title,sub,backRoute,backParams){return `<div class="page-h" style="display:flex;align-items:center;gap:11px">${backRoute?`<button class="iconbtn" onclick="go('${backRoute}',${backParams?JSON.stringify(backParams):'{}'})">${svg('back')}</button>`:''}<div><h2>${esc(title)}</h2>${sub?`<p>${esc(sub)}</p>`:''}</div></div>`;}
+function subhead(title,sub,backRoute,backParams){return `<div class="page-h" style="display:flex;align-items:center;gap:11px">${backRoute?`<button class="iconbtn" onclick="go('${backRoute}',${backParams?JSON.stringify(backParams).replace(/"/g,'&quot;'):'{}'})">${svg('back')}</button>`:''}<div><h2>${esc(title)}</h2>${sub?`<p>${esc(sub)}</p>`:''}</div></div>`;}
 function requireAdmin(){const u=currentUser();return u.role==='admin';}
 
 /* ============================================================
