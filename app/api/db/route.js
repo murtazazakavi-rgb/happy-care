@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { sql } from '@/lib/db';
+import { teableDb } from '@/lib/teable';
 import { NextResponse } from 'next/server';
 
 const tables = [
@@ -25,6 +26,29 @@ const tables = [
 ];
 
 export async function GET() {
+  if (teableDb) {
+    try {
+      const data = await teableDb.getAllData();
+      const _seq = {};
+      for (const t of tables) {
+        const rows = data[t] || [];
+        let maxId = 0;
+        for (const r of rows) {
+          if (typeof r.id === 'number' && r.id > maxId) {
+            maxId = r.id;
+          }
+        }
+        _seq[t] = maxId;
+      }
+      const response = NextResponse.json({ fallback: false, data, _seq });
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      return response;
+    } catch (error) {
+      console.error('Error fetching Teable database:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  }
+
   if (!sql) {
     return NextResponse.json({ fallback: true, msg: 'Database URL not configured' });
   }
@@ -56,13 +80,48 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  if (!sql) {
-    return NextResponse.json({ error: 'Database URL not configured' }, { status: 500 });
-  }
-
   try {
     const body = await request.json();
     const { action, table, id, data } = body;
+
+    if (teableDb) {
+      if (action === 'save_all') {
+        await teableDb.saveAll(data);
+        return NextResponse.json({ success: true });
+      }
+
+      if (action === 'wipe') {
+        const emptyData = {};
+        tables.forEach(t => emptyData[t] = []);
+        await teableDb.saveAll(emptyData);
+        return NextResponse.json({ success: true });
+      }
+
+      if (!tables.includes(table)) {
+        return NextResponse.json({ error: 'Invalid table name' }, { status: 400 });
+      }
+
+      if (action === 'insert') {
+        await teableDb.insert(table, data);
+        return NextResponse.json({ success: true });
+      }
+
+      if (action === 'update') {
+        await teableDb.update(table, id, data);
+        return NextResponse.json({ success: true });
+      }
+
+      if (action === 'remove') {
+        await teableDb.remove(table, id);
+        return NextResponse.json({ success: true });
+      }
+
+      return NextResponse.json({ error: 'Invalid database action' }, { status: 400 });
+    }
+
+    if (!sql) {
+      return NextResponse.json({ error: 'Database URL not configured' }, { status: 500 });
+    }
 
     // Handle full database sync/restore in a single transaction
     if (action === 'save_all') {
