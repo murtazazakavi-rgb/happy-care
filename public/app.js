@@ -520,7 +520,7 @@ function render(){
   const showCtx=!isParent&&['today','grouping','children','groups','attendance-child','attendance-staff','checkin','checkout','closing'].includes(route);
   $('#app').innerHTML=`
     <header class="appbar">
-      <div class="crest">${LOGO}</div>
+      <div class="crest">${getLogo()}</div>
       <div class="tt"><div class="ey">Happy Care · Istefada Ilmiyah</div><h1>${esc(scr.title||'Happy Care')}</h1></div>
       <div class="who" style="display:flex;align-items:center;gap:12px">
         <span id="cloud-sync-indicator" style="width:10px;height:10px;border-radius:50%;background:${DB.isCloud?'var(--ok)':'var(--warn)'};display:inline-block;transition:background .3s;flex:none" title="${DB.isCloud?'Connected to Neon DB':'Using local browser offline storage'}"></span>
@@ -574,7 +574,7 @@ function closeModal(){ $('#modal-root').innerHTML=''; }
 let loginMode='staff';
 SCREENS.login=function(){
   return `<div class="login"><div class="login-card">
-    <div class="crest">${LOGO}</div>
+    <div class="crest">${getLogo()}</div>
     <div class="eyebrow" style="text-align:center;letter-spacing:0.18em;margin-bottom:4px;color:var(--gold);font-weight:700">ISTEFADA ILMIYAH</div>
     <h1 style="font-size:38px;font-weight:700;color:var(--wine);text-align:center;line-height:1;margin-bottom:2px;letter-spacing:-0.02em">Happy Care</h1>
     <div style="text-align:center;font-size:12.5px;color:var(--ink-soft);margin:4px 0 20px;font-style:italic">An initiative by Daeratul Aqeeq</div>
@@ -726,6 +726,55 @@ SCREENS.setup=function(){
         <p class="muted" style="font-size:12.5px;margin-top:2px">Configure accounts, passwords, and authorization levels for admins, supervisors, teachers, gate desks, and parents.</p>
       </div>
       <button class="btn sm" onclick="go('user-access')">${svg('key')} Manage Access</button>
+    </div>
+
+    <div class="sec-h" style="margin-top:28px"><h3>App Branding & Assets</h3></div>
+    <div class="card" style="padding:20px">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line-soft);padding-bottom:16px">
+          <div style="flex:1;min-width:200px">
+            <div style="font-weight:800;font-size:15px;color:var(--wine)">App Logo</div>
+            <p class="muted" style="font-size:12.5px;margin-top:2px">Add, change, or remove the custom logo displayed in the app header and login screens.</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <div class="crest" style="width:50px;height:50px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;padding:4px">${getLogo()}</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn sm ghost" onclick="triggerLogoUpload()">${svg('upload')} Upload Logo</button>
+              ${DB.find('meta', x => x.k === 'app_logo') ? `<button class="btn sm text-danger" onclick="removeLogo()" style="color:var(--urgent);border-color:transparent;background:transparent;padding:4px">${svg('trash')} Remove</button>` : ''}
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-weight:800;font-size:15px;color:var(--wine)">Other Brand Assets</div>
+          <p class="muted" style="font-size:12.5px;margin-top:2px;margin-bottom:12px">Upload additional images or files used throughout the app for reference or customization.</p>
+          
+          <div class="rows" style="margin-top:8px">
+            ${DB.filter('meta', x => x.k.startsWith('asset:')).map(asset => {
+              const name = asset.k.substring(6);
+              const isImg = asset.v.startsWith('data:image/');
+              return `
+              <div class="row" style="padding:8px 12px;box-shadow:none;border-color:var(--line-soft)">
+                <div class="av" style="width:34px;height:34px;border-radius:6px;background:var(--peach-soft);display:grid;place-items:center;overflow:hidden">
+                  ${isImg ? `<img src="${asset.v}" style="width:100%;height:100%;object-fit:cover" />` : svg('clip')}
+                </div>
+                <div class="meta" style="flex:1">
+                  <div class="nm" style="font-size:13.5px;font-weight:600">${esc(name)}</div>
+                  <div class="sm">${isImg ? 'Image asset' : 'File asset'} · ${Math.round(asset.v.length * 0.75 / 1024)} KB</div>
+                </div>
+                <div class="end" style="display:flex;gap:6px">
+                  ${isImg ? `<button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto" onclick="previewImage('${asset.v.replace(/'/g, "\\'")}', '${name.replace(/'/g, "\\'")}')">${svg('search')}</button>` : ''}
+                  <button class="xbtn" style="width:30px;height:30px" onclick="removeAsset('${asset.k.replace(/'/g, "\\'")}')">${svg('trash')}</button>
+                </div>
+              </div>
+              `;
+            }).join('') || '<div class="muted" style="font-size:12.5px;text-align:center;padding:12px">No other assets uploaded yet.</div>'}
+          </div>
+          
+          <div style="margin-top:12px">
+            <button class="btn sm ghost" onclick="triggerAssetUpload()">${svg('plus')} Upload Brand Asset</button>
+          </div>
+        </div>
+      </div>
     </div>
     `:''}
     `};
@@ -1841,6 +1890,83 @@ function previewImage(base64, title) {
       <div style="margin-top:16px"><a href="${base64}" download="${title.toLowerCase().replace(' ', '_')}.jpg" class="btn sm" style="display:inline-flex;align-items:center;gap:6px">${svg('download')} Download Image</a></div>
     </div>
   `);
+}
+
+function getLogo() {
+  const customLogo = DB.find('meta', x => x.k === 'app_logo');
+  if (customLogo && customLogo.v) {
+    if (customLogo.v.trim().startsWith('<svg')) {
+      return customLogo.v;
+    }
+    return `<img src="${customLogo.v}" alt="Logo" style="max-height:100%;max-width:100%;object-fit:contain" />`;
+  }
+  return LOGO;
+}
+
+function triggerLogoUpload() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const existing = DB.find('meta', x => x.k === 'app_logo');
+      if (existing) {
+        DB.update('meta', existing.id, { v: r.result });
+      } else {
+        DB.insert('meta', { k: 'app_logo', v: r.result });
+      }
+      toast('Logo updated successfully!');
+      render();
+    };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+function removeLogo() {
+  const existing = DB.find('meta', x => x.k === 'app_logo');
+  if (existing) {
+    DB.remove('meta', existing.id);
+    toast('Custom logo removed. Default logo active.');
+    render();
+  }
+}
+
+function triggerAssetUpload() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*,application/pdf';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const key = 'asset:' + f.name;
+      const existing = DB.find('meta', x => x.k === key);
+      if (existing) {
+        DB.update('meta', existing.id, { v: r.result });
+        toast('Asset updated successfully!');
+      } else {
+        DB.insert('meta', { k: key, v: r.result });
+        toast('Asset uploaded successfully!');
+      }
+      render();
+    };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+function removeAsset(key) {
+  const existing = DB.find('meta', x => x.k === key);
+  if (existing) {
+    DB.remove('meta', existing.id);
+    toast('Asset removed successfully.');
+    render();
+  }
 }
 
 function openStaffFinancialModal() {
