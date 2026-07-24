@@ -331,7 +331,7 @@ const DB={
   key:'happycare_v1', data:null, mem:false,
   tables:['users','programs','phases','operatingDates','groups','children','parents','childParent','staff','groupStaff','childGroup','timetableTemplates','childAttendance','staffAttendance','queries','queryResponses','issues','meta'],
   load(){ try{const raw=localStorage.getItem(this.key); this.data=raw?JSON.parse(raw):null;}catch(e){this.mem=true;this.data=null;}
-    if(!this.data){this.data={_seq:{}}; this.tables.forEach(t=>this.data[t]=[]);} if(!this.data._seq)this.data._seq={}; },
+    if(!this.data){this.data={_seq:{}}; this.tables.forEach(t=>this.data[t]=[]);} if(!this.data._seq)this.data._seq={}; this.parseJSONFields(); },
   save(){ if(this.mem)return; try{localStorage.setItem(this.key,JSON.stringify(this.data));}catch(e){this.mem=true;toast('Storage blocked — running in memory only','err');} },
   next(t){ this.data._seq[t]=(this.data._seq[t]||0)+1; return this.data._seq[t]; },
   all(t){ return this.data[t]||[]; },
@@ -342,7 +342,24 @@ const DB={
   find(t,fn){ return this.data[t].find(fn); },
   filter(t,fn){ return this.data[t].filter(fn); },
   exportJSON(){ return JSON.stringify(this.data,null,1); },
-  importJSON(txt){ const d=JSON.parse(txt); if(!d._seq)throw new Error('Not a Happy Care backup'); this.data=d; this.save(); },
+  importJSON(txt){ const d=JSON.parse(txt); if(!d._seq)throw new Error('Not a Happy Care backup'); this.data=d; this.parseJSONFields(); this.save(); },
+  parseJSONFields(){
+    if(!this.data)return;
+    if(Array.isArray(this.data.groups)){
+      this.data.groups.forEach(g=>{
+        if(g.customTimetable&&typeof g.customTimetable==='string'){
+          try{g.customTimetable=JSON.parse(g.customTimetable);}catch(e){g.customTimetable=[];}
+        }
+      });
+    }
+    if(Array.isArray(this.data.timetableTemplates)){
+      this.data.timetableTemplates.forEach(t=>{
+        if(t.items&&typeof t.items==='string'){
+          try{t.items=JSON.parse(t.items);}catch(e){t.items=[];}
+        }
+      });
+    }
+  },
   wipe(){ localStorage.removeItem(this.key); this.data=null; this.load(); }
 };
 

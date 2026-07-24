@@ -67,6 +67,7 @@ const DB={
         this.data = payload.data;
         this.isCloud = true;
         this.data._seq = payload._seq || {};
+        this.parseJSONFields();
         console.log('Successfully connected to Neon DB cloud storage!');
       } else {
         console.warn('Backend returned fallback mode. Using local browser storage.');
@@ -88,6 +89,7 @@ const DB={
     try {
       const raw = localStorage.getItem(this.key);
       this.data = raw ? JSON.parse(raw) : null;
+      this.parseJSONFields();
     } catch (e) {
       this.mem = true;
       this.data = null;
@@ -222,9 +224,28 @@ const DB={
     const d = JSON.parse(txt);
     if (!d._seq) throw new Error('Not a Happy Care backup');
     this.data = d;
+    this.parseJSONFields();
     this.save();
     if (this.isCloud) {
       await this.saveAllToServer();
+    }
+  },
+
+  parseJSONFields() {
+    if (!this.data) return;
+    if (Array.isArray(this.data.groups)) {
+      this.data.groups.forEach(g => {
+        if (g.customTimetable && typeof g.customTimetable === 'string') {
+          try { g.customTimetable = JSON.parse(g.customTimetable); } catch (e) { g.customTimetable = []; }
+        }
+      });
+    }
+    if (Array.isArray(this.data.timetableTemplates)) {
+      this.data.timetableTemplates.forEach(t => {
+        if (t.items && typeof t.items === 'string') {
+          try { t.items = JSON.parse(t.items); } catch (e) { t.items = []; }
+        }
+      });
     }
   },
   
