@@ -370,7 +370,7 @@ function exportCSV(name,header,rows){ downloadFile(name, toCSV([header,...rows])
 const ROLE_LABEL={admin:'Admin',supervisor:'Phase Supervisor',teacher:'Group Teacher',checkin:'Check-in / Pickup',parent:'Parent'};
 const STAFF_NAV=[['today','Today','home'],['setup','Setup','setup'],['grouping','Grouping','group'],['children','Children','child'],['reports','Reports','report']];
 const PARENT_NAV=[['p-children','My Children','child'],['p-timetable','Timetable','cal'],['p-queries','Queries','msg'],['p-account','Profile','user']];
-const NAV_MAP={setup:'setup',phase:'setup','user-access':'setup',grouping:'grouping',groups:'grouping',group:'grouping',groupedit:'grouping',groupstaff:'grouping',timetables:'grouping',children:'children',child:'children','import-students':'children',reports:'reports','attendance-child':'today','attendance-staff':'today',checkin:'today',checkout:'today',queries:'today',closing:'today',phaseclosing:'today',today:'today',
+const NAV_MAP={setup:'setup',phase:'setup','user-access':'setup',staffpool:'setup',grouping:'grouping',groups:'grouping',group:'grouping',groupedit:'grouping',groupstaff:'grouping',timetables:'grouping',children:'children',child:'children','import-students':'children',reports:'reports','attendance-child':'today','attendance-staff':'today',checkin:'today',checkout:'today',queries:'today',closing:'today',phaseclosing:'today',today:'today',
   'p-children':'p-children','p-profile':'p-children','p-raise':'p-queries','p-timetable':'p-timetable','p-queries':'p-queries','p-account':'p-account'};
 
 /* ---------- app state ---------- */
@@ -854,7 +854,7 @@ function phaseCard(p,u){
       <div class="tile b"><span class="strip"></span><div class="tl">Children</div><div class="num tnum" style="font-size:20px">${kids}</div></div>
       <div class="tile ${assigned<kids?'w':'g'}"><span class="strip"></span><div class="tl">Assigned</div><div class="num tnum" style="font-size:20px">${assigned}<small>/${kids}</small></div></div>
     </div>
-    <div class="btnrow" style="margin-top:12px"><button class="btn ghost sm" onclick="go('grouping')">${svg('group')} Grouping</button><button class="btn ghost sm" onclick="go('children')">${svg('child')} Children</button><button class="btn ghost sm" onclick="go('timetables')">${svg('clock')} Timetables</button></div>`;
+    <div class="btnrow" style="margin-top:12px"><button class="btn ghost sm" onclick="go('grouping')">${svg('group')} Grouping</button><button class="btn ghost sm" onclick="go('children')">${svg('child')} Children</button><button class="btn ghost sm" onclick="go('timetables')">${svg('clock')} Timetables</button>${['admin','supervisor'].includes(u.role)?`<button class="btn ghost sm" onclick="go('staffpool')">${svg('people')} Staff Pool</button>`:''}</div>`;
 }
 function editProgram(){ const p=DB.all('programs')[0]||{}; openModal('Edit program',`
   <div class="field"><label>Program name</label><input class="control" id="pg-name" value="${esc(p.name||'')}"></div>
@@ -1776,6 +1776,61 @@ function removeAsset(key) {
     DB.remove('meta', existing.id);
     toast('Asset removed successfully.');
     render();
+  }
+}
+SCREENS.staffpool = function() {
+  const u = currentUser();
+  if (!['admin', 'supervisor'].includes(u.role)) {
+    return { title: 'Access Denied', html: emptyState('shield', 'Access Denied', 'You do not have permission to view the Staff Pool.', '') };
+  }
+  const ph = currentPhase();
+  const staff = ph ? DB.filter('staff', s => s.phaseId === ph.id || !s.phaseId).sort((a,b)=>a.name.localeCompare(b.name)) : [];
+  
+  return {
+    title: 'Staff Pool',
+    html: `
+      ${subhead('Staff Members Pool', ph ? `Manage staff members registered for ${ph.name}` : 'Manage registered staff members', 'setup')}
+      ${u.role==='admin'?`
+      <div class="btnrow" style="margin-bottom:12px">
+        <button class="btn sm" onclick="openStaffForm(0)">${svg('plus')} Add staff member</button>
+      </div>`:''}
+      <div class="card" style="padding:15px">
+        <div class="rows">${staff.length?staff.map(s=>`
+          <div class="row" style="padding:8px 12px;box-shadow:none;border-color:var(--line-soft)">
+            <div class="av" style="width:34px;height:34px">${initials(s.name)}</div>
+            <div class="meta">
+              <div class="nm" style="font-size:13.5px">${esc(s.name)} <span class="tag" style="margin-left:6px">${esc(s.role)}</span></div>
+              <div class="sm">ITS ${esc(s.itsId||'—')} · Mobile ${esc(s.mobile||'—')} · ${s.visibleToParents?'Visible to parents':'Private'}</div>
+            </div>
+            ${u.role==='admin'?`<div class="end">
+              <button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto;color:var(--warn)" title="Reset password to default" onclick="adminResetUserPassword(${s.id},'${s.name.replace("'","\\'")}')">${svg('key')}</button>
+              <button class="btn ghost sm" style="min-height:30px;padding:4px 8px;min-width:auto" onclick="openStaffForm(${s.id})">${svg('edit')}</button>
+              <button class="xbtn" style="width:30px;height:30px" onclick="deleteStaff(${s.id})">${svg('trash')}</button>
+            </div>`:''}
+          </div>`).join(''):'<div class="muted" style="font-size:12.5px;text-align:center;padding:12px">No staff members in this phase yet.</div>'}
+        </div>
+      </div>
+    `
+  };
+};
+
+function deleteStaff(id){ if(!confirm('Are you sure you want to remove this staff member?'))return; const u = DB.find('users', x => x.staffId === id); if(u) DB.remove('users', u.id); DB.filter('groupStaff',x=>x.staffId===id).forEach(x=>DB.remove('groupStaff',x.id)); DB.remove('staff',id); toast('Staff member removed'); render(); }
+
+function adminResetUserPassword(userId, userName) {
+  if(!confirm('Reset password for ' + userName + ' back to the default "happycare123"?')) return;
+  const u = DB.find('users', x => x.parentId === userId || x.staffId === userId || (x.role === 'parent' && DB.byId('parents', x.parentId)?.id === userId));
+  const userObj = u || DB.byId('users', userId);
+  if(userObj) {
+    const salt = rndSalt();
+    DB.update('users', userObj.id, {
+      salt: salt,
+      hash: hashPw('happycare123', salt),
+      needsPasswordChange: true
+    });
+    toast('Password reset successfully to default');
+    render();
+  } else {
+    toast('No associated login account found to reset', 'err');
   }
 }
 
