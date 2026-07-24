@@ -91,7 +91,9 @@ async function main() {
     await teableRequest(`/api/table/${userTableId}/record/${recordId}`, {
       method: 'PATCH',
       body: JSON.stringify({
-        fields: adminUser
+        record: {
+          fields: adminUser
+        }
       })
     });
   } else {
