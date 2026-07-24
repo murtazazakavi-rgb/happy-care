@@ -645,7 +645,7 @@ function editPhase(id){ const p=id?DB.byId('phases',id):{name:'',startDate:'',en
       <div class="field"><label>Max children / group</label><input class="control" type="number" id="ph-mx" value="${p.maxPerGroup}" min="1"></div></div>
     ${!id?`<label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer"><input type="checkbox" id="ph-mkgroups" checked> Create empty groups automatically</label>`:''}
     <div class="field hint" style="margin-top:8px">Operating dates are generated automatically for every day in the range.</div>`,
-    `<button class="btn ghost block" onclick="closeModal()">Cancel</button><button class="btn block" onclick="savePhase(${id||0})">Save phase</button>`); }
+    `<button class="btn ghost block" onclick="closeModal()">Cancel</button>${id ? `<button class="btn text-danger block" onclick="deletePhase(${id})" style="margin-top:8px;margin-bottom:8px;background:transparent;border:1px solid var(--urgent);color:var(--urgent)">${svg('trash')} Delete Phase</button>` : ''}<button class="btn block" onclick="savePhase(${id||0})">Save phase</button>`); }
 function savePhase(id){
   const name=val('ph-name'),sd=val('ph-sd'),ed=val('ph-ed'); if(!name||!sd||!ed){toast('Name, start and end date are required','err');return;}
   if(ed<sd){toast('End date must be after start date','err');return;}
@@ -656,6 +656,24 @@ function savePhase(id){
   genDates(sd,ed).forEach(d=>DB.insert('operatingDates',{phaseId:ph.id,date:d}));
   if(!id&&checked('ph-mkgroups')){ for(let i=0;i<rec.groupCount;i++){ DB.insert('groups',{phaseId:ph.id,name:'Group '+(i+1),code:'G'+String(i+1).padStart(2,'0'),ageCategory:'Mixed',capacity:rec.maxPerGroup,room:'',status:'draft',timetableTemplateId:null}); } }
   closeModal(); setPhaseSilent(ph.id); toast('Phase saved · '+genDates(sd,ed).length+' dates generated'); go('setup');
+}
+function deletePhase(id){
+  if(!confirm('Are you sure you want to delete this phase? This will permanently delete all associated operating dates, venues, groups, staff assignments, and child allocations for this phase.')) return;
+  DB.filter('operatingDates', x => x.phaseId === id).forEach(x => DB.remove('operatingDates', x.id));
+  const groupsInPhase = DB.filter('groups', x => x.phaseId === id);
+  const groupIds = groupsInPhase.map(g => g.id);
+  DB.filter('groupStaff', x => groupIds.includes(x.groupId)).forEach(x => DB.remove('groupStaff', x.id));
+  DB.filter('childGroup', x => x.phaseId === id || groupIds.includes(x.groupId)).forEach(x => DB.remove('childGroup', x.id));
+  groupsInPhase.forEach(g => DB.remove('groups', g.id));
+  DB.filter('venues', x => x.phaseId === id).forEach(x => DB.remove('venues', x.id));
+  DB.remove('phases', id);
+  const phases = DB.all('phases');
+  if (state.phaseId === id) {
+    state.phaseId = phases[0] ? phases[0].id : null;
+  }
+  closeModal();
+  toast('Phase deleted');
+  render();
 }
 
 
@@ -936,6 +954,7 @@ SCREENS.groupedit=function(p){ const ph=currentPhase(); const g=p.id?DB.byId('gr
         <div class="field"></div>
       </div>
       <button class="btn block" onclick="saveGroup(${p.id||0})">${svg('check')} Save group</button>
+      ${p.id ? `<button class="btn text-danger block" onclick="deleteGroup(${p.id})" style="margin-top:12px;background:transparent;border:1px solid var(--urgent);color:var(--urgent)">${svg('trash')} Delete Group</button>` : ''}
     </div>`};
 };
 function toggleCustomAge(){ const v=$('#gf-age').value; $('#gf-customrow').style.display=v==='Custom'?'':'none'; }
@@ -944,6 +963,14 @@ function saveGroup(id){ const ph=currentPhase(); const name=val('gf-name'); if(!
   const tt=val('gf-tt'); const vn=val('gf-venue'); const rec={name,code:val('gf-code')||('G'+String((phaseGroups(ph.id).length+1)).padStart(2,'0')),ageCategory:age,capacity:Number(val('gf-cap'))||35,room:val('gf-room'),timetableTemplateId:tt?Number(tt):null,venueId:vn?Number(vn):null};
   let g; if(id){g=DB.update('groups',id,rec);} else {rec.phaseId=ph.id;rec.status='draft';g=DB.insert('groups',rec);}
   DB.update('groups',g.id,{status:groupReadiness(g).ready?'ready':'draft'}); toast('Group saved'); go('group',{id:g.id}); }
+function deleteGroup(id){
+  if(!confirm('Are you sure you want to delete this group? This will unassign all staff and children currently in this group.')) return;
+  DB.filter('groupStaff', x => x.groupId === id).forEach(x => DB.remove('groupStaff', x.id));
+  DB.filter('childGroup', x => x.groupId === id).forEach(x => DB.remove('childGroup', x.id));
+  DB.remove('groups', id);
+  toast('Group deleted');
+  go('grouping');
+}
 
 SCREENS.groupstaff=function(p){ const g=DB.byId('groups',p.id); if(!g)return{title:'Staff',html:emptyState('people','Group not found','','')};
   const slots=[...STAFF_SLOTS,'Group Coordinator','Medical Support Contact']; const gs=groupStaffList(g.id); const filled=gs.filter(x=>x.staffId&&STAFF_SLOTS.includes(x.slot)).length;
