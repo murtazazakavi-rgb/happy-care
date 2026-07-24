@@ -269,14 +269,14 @@ const NAV_MAP={setup:'setup',phase:'setup','user-access':'setup',grouping:'group
 /* ---------- app state ---------- */
 const state={route:'today',params:{},userId:null,phaseId:null,dateISO:null};
 function currentUser(){ return DB.byId('users',state.userId); }
-function currentPhase(){ return DB.byId('phases',state.phaseId)||DB.all('phases')[0]; }
+function currentPhase(){ const all=DB.all('phases'); return DB.byId('phases',state.phaseId)||all.find(p=>p.active!==false)||all[0]; }
 function phaseDates(pid){ return DB.filter('operatingDates',d=>d.phaseId===pid).map(d=>d.date).sort(); }
 function go(route,params){ state.route=route; state.params=params||{}; window.scrollTo(0,0); render(); }
 function setPhase(pid){ state.phaseId=pid; const ds=phaseDates(pid); state.dateISO=ds.includes(todayISO())?todayISO():(ds[0]||todayISO()); render(); }
 function setDate(iso){ state.dateISO=iso; render(); }
 
 /* ---------- auth ---------- */
-function login(itsId,pw){ const u=DB.find('users',x=>x.itsId===itsId.trim()); if(!u)return{ok:false,msg:'No account with that ITS ID'}; if(u.hash!==hashPw(pw,u.salt))return{ok:false,msg:'Incorrect password'}; if(u.active===false)return{ok:false,msg:'Account is inactive'}; state.userId=u.id; localStorage.setItem('hc_session',u.id); const p=DB.all('phases')[0]; if(p)setPhaseSilent(p.id); return{ok:true,user:u}; }
+function login(itsId,pw){ const u=DB.find('users',x=>x.itsId===itsId.trim()); if(!u)return{ok:false,msg:'No account with that ITS ID'}; if(u.hash!==hashPw(pw,u.salt))return{ok:false,msg:'Incorrect password'}; if(u.active===false)return{ok:false,msg:'Account is inactive'}; state.userId=u.id; localStorage.setItem('hc_session',u.id); const p=DB.all('phases').find(x=>x.active!==false)||DB.all('phases')[0]; if(p)setPhaseSilent(p.id); return{ok:true,user:u}; }
 function setPhaseSilent(pid){ state.phaseId=pid; const ds=phaseDates(pid); state.dateISO=ds.includes(todayISO())?todayISO():(ds[0]||todayISO()); }
 function logout(){ state.userId=null; try{localStorage.removeItem('hc_session');}catch(e){} state.route='today'; render(); }
 function restoreSession(){ try{const id=Number(localStorage.getItem('hc_session')); if(id&&DB.byId('users',id)){state.userId=id;}}catch(e){} }
@@ -536,10 +536,16 @@ function render(){
   if(scr.after)scr.after();
 }
 function ctxbar(showDate){
-  const phs=DB.all('phases'); const ph=currentPhase();
+  const allPhases=DB.all('phases');
+  const activePh=allPhases.filter(p=>p.active!==false);
+  const archivedPh=allPhases.filter(p=>p.active===false);
+  const ph=currentPhase();
   const ds=ph?phaseDates(ph.id):[];
   return `<div class="ctxbar">
-    <span class="pill">${svg('cal')}<select onchange="setPhase(Number(this.value))">${phs.map(p=>`<option value="${p.id}" ${p.id===(ph&&ph.id)?'selected':''}>${esc(p.name)}</option>`).join('')}</select></span>
+    <span class="pill">${svg('cal')}<select onchange="setPhase(Number(this.value))">
+      ${activePh.length?`<optgroup label="Active Phases">${activePh.map(p=>`<option value="${p.id}" ${p.id===(ph&&ph.id)?'selected':''}>${esc(p.name)}</option>`).join('')}</optgroup>`:''}
+      ${archivedPh.length?`<optgroup label="Archived / Done">${archivedPh.map(p=>`<option value="${p.id}" ${p.id===(ph&&ph.id)?'selected':''}>${esc(p.name)}</option>`).join('')}</optgroup>`:''}
+    </select></span>
     ${showDate&&ds.length?`<span class="pill">${svg('clock')}<select onchange="setDate(this.value)">${ds.map(d=>`<option value="${d}" ${d===state.dateISO?'selected':''}>${fmtDateShort(d)}</option>`).join('')}</select></span>`:''}
     ${ph?`<span class="pill" style="color:var(--ink-faint)">${to12(ph.startTime)}–${to12(ph.endTime)}</span>`:''}
     ${showDate?`<span class="pill"><span class="live"></span>${state.dateISO===todayISO()?'Today':'Selected'}</span>`:''}
@@ -784,7 +790,7 @@ function phaseCard(p,u){
   const kids=phaseChildren(p.id).length; const assigned=phaseChildren(p.id).filter(c=>childGroupId(c.id,p.id)).length;
   return `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-      <div><div class="serif" style="font-size:20px;font-weight:700;color:var(--wine)">${esc(p.name)}</div>
+      <div><div style="display:flex;align-items:center;gap:8px"><div class="serif" style="font-size:20px;font-weight:700;color:var(--wine)">${esc(p.name)}</div>${p.active===false?`<span class="tag" style="background:var(--warn-soft);color:var(--warn);font-size:10px;padding:2px 6px">Archived</span>`:''}</div>
         <div class="muted" style="font-size:12.5px;margin-top:2px">${fmtDate(p.startDate)} → ${fmtDate(p.endDate)}</div>
         <div class="muted" style="font-size:12.5px">${to12(p.startTime)}–${to12(p.endTime)} daily · ${dates.length} operating days</div></div>
       ${u.role==='admin'?`<button class="btn ghost sm" onclick="editPhase(${p.id})">${svg('edit')} Edit</button>`:''}
@@ -802,7 +808,7 @@ function editProgram(){ const p=DB.all('programs')[0]||{}; openModal('Edit progr
   <div class="field"><label>Hijri year</label><input class="control" id="pg-year" value="${esc(p.year||'')}"></div>`,
   `<button class="btn ghost block" onclick="closeModal()">Cancel</button><button class="btn block" onclick="saveProgram(${p.id||0})">Save</button>`); }
 function saveProgram(id){ const name=val('pg-name'); if(!name){toast('Enter a name','err');return;} if(id)DB.update('programs',id,{name,year:val('pg-year')}); else DB.insert('programs',{name,year:val('pg-year')}); closeModal(); toast('Program saved'); render(); }
-function editPhase(id){ const p=id?DB.byId('phases',id):{name:'',startDate:'',endDate:'',startTime:'08:00',endTime:'13:30',groupCount:10,maxPerGroup:35};
+function editPhase(id){ const p=id?DB.byId('phases',id):{name:'',startDate:'',endDate:'',startTime:'08:00',endTime:'13:30',groupCount:10,maxPerGroup:35,active:true};
   openModal(id?'Edit phase':'Add phase',`
     <div class="field"><label>Phase name <span class="req">*</span></label><input class="control" id="ph-name" value="${esc(p.name)}" placeholder="e.g. Phase 1"></div>
     <div class="formrow two"><div class="field"><label>Start date <span class="req">*</span></label><input class="control" type="date" id="ph-sd" value="${esc(p.startDate)}"></div>
@@ -812,12 +818,15 @@ function editPhase(id){ const p=id?DB.byId('phases',id):{name:'',startDate:'',en
     <div class="formrow two"><div class="field"><label>Number of groups</label><input class="control" type="number" id="ph-gc" value="${p.groupCount}" min="1"></div>
       <div class="field"><label>Max children / group</label><input class="control" type="number" id="ph-mx" value="${p.maxPerGroup}" min="1"></div></div>
     ${!id?`<label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer"><input type="checkbox" id="ph-mkgroups" checked> Create empty groups automatically</label>`:''}
+    ${id?`<label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px"><input type="checkbox" id="ph-active" ${p.active!==false?'checked':''}> Active Phase (shows in selection dropdown)</label>`:''}
     <div class="field hint" style="margin-top:8px">Operating dates are generated automatically for every day in the range.</div>`,
     `<button class="btn ghost block" onclick="closeModal()">Cancel</button>${id ? `<button class="btn text-danger block" onclick="deletePhase(${id})" style="margin-top:8px;margin-bottom:8px;background:transparent;border:1px solid var(--urgent);color:var(--urgent)">${svg('trash')} Delete Phase</button>` : ''}<button class="btn block" onclick="savePhase(${id||0})">Save phase</button>`); }
 function savePhase(id){
   const name=val('ph-name'),sd=val('ph-sd'),ed=val('ph-ed'); if(!name||!sd||!ed){toast('Name, start and end date are required','err');return;}
   if(ed<sd){toast('End date must be after start date','err');return;}
   const rec={name,startDate:sd,endDate:ed,startTime:val('ph-st')||'08:00',endTime:val('ph-et')||'13:30',groupCount:Number(val('ph-gc'))||10,maxPerGroup:Number(val('ph-mx'))||35};
+  if(id) rec.active=checked('ph-active');
+  else rec.active=true;
   let ph;
   if(id){ ph=DB.update('phases',id,rec); DB.filter('operatingDates',d=>d.phaseId===id).forEach(d=>DB.remove('operatingDates',d.id)); }
   else { rec.programId=(DB.all('programs')[0]||DB.insert('programs',{name:'Happy Care · Istefada Ilmiyah',year:'1448'})).id; ph=DB.insert('phases',rec); }
